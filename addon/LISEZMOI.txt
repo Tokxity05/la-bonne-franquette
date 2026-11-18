@@ -13,6 +13,8 @@ Ce qu'il partage, et SEULEMENT ça
 - le nom de ton personnage ;
 - sa classe ;
 - tes métiers et leur niveau (par exemple « Enchantement 279/300 ») ;
+- ta spécialisation de métier, si tu en as une (ingénieur gnome ou gobelin, fabricant d'armes ou d'armures,
+  travail du cuir d'écailles de dragon, élémentaire ou tribal) ;
 - les recettes que tu connais dans ces métiers ;
 - les recharges de tes recettes (par exemple « Étoffe lunaire prête dans 2 jours »).
 
@@ -64,7 +66,8 @@ Un bouton rond près de la mini-carte montre que l'addon tourne. Au survol : ce 
 est actif, le dernier envoi. Clic droit : pause ou reprise (l'icône devient grise en pause).
 
 /lbf               ce que l'addon partage, et combien de membres sont dans ton carnet
-/lbf qui <recette> qui sait faire cette recette (exemple : /lbf qui révélation)
+/lbf qui <recette> qui sait faire cette recette (exemple : /lbf qui révélation) ; marche aussi avec
+                   un objet lié (tape /lbf qui puis Maj + clic sur l'objet)
 /lbf envoyer       renvoyer tes métiers maintenant
 /lbf code          ton code à coller sur le site (aussi : Ctrl + clic sur le bouton)
 /lbf pause         ne plus RIEN partager ; les addons des membres connectés effacent ta fiche
