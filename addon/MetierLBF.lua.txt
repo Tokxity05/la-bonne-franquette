@@ -52,7 +52,7 @@ local function split(s, sep)
 end
 local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
-local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.6.0"
+local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.6.1"
 
 local function plusRecente(a, b)
 	local x, y = split(a or "0", "."), split(b or "0", ".")
@@ -497,6 +497,41 @@ local function plat(s)
 	return s
 end
 
+-- Le lien de ce que la recette fabrique (l'objet, sinon la recette elle-même) : un clic l'ouvre comme dans la discussion
+local function lienObjet(itemID)
+	local _, l = sur((C_Item and C_Item.GetItemInfo) or GetItemInfo, itemID)
+	if texte(l) then return l end
+	if C_Item and C_Item.RequestLoadItemDataByID then sur(C_Item.RequestLoadItemDataByID, itemID) end
+end
+
+local function lienRecette(id, nom)
+	local T = C_TradeSkillUI
+	if type(T) == "table" then
+		local out = sur(T.GetRecipeOutputItemData, id)
+		if type(out) == "table" then
+			local l = texte(out.hyperlink) or (nombre(out.itemID) and lienObjet(out.itemID))
+			if l then return l end
+		end
+		local l = texte((sur(T.GetRecipeItemLink, id))) or texte((sur(T.GetRecipeLink, id)))
+		if l then return l end
+	end
+	return texte((C_Spell and sur(C_Spell.GetSpellLink, id))) or texte((sur(GetSpellLink, id))) or (VERT .. nom .. "|r")
+end
+
+-- Pas encore en mémoire : le jeu va chercher l'objet, la réponse s'affiche une demi-seconde plus tard avec son lien
+local function objetEnAttente(id)
+	local T = C_TradeSkillUI
+	local out = type(T) == "table" and sur(T.GetRecipeOutputItemData, id)
+	return type(out) == "table" and nombre(out.itemID) ~= nil and not texte(out.hyperlink) and not lienObjet(out.itemID)
+end
+
+-- Le nom d'un membre à la couleur de sa classe ; un clic ouvre un chuchotement, comme partout dans la discussion
+local function lienJoueur(nom, classe)
+	local c = classe and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classe]
+	local couleur = c and (c.colorStr or string.format("ff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255)) or "ffffffff"
+	return "|Hplayer:" .. nom .. "|h|c" .. couleur .. nom .. "|r|h"
+end
+
 local function chercher(mot)
 	local q = plat(mot)
 	if q == "" then dire("/lbf qui <recette>, par exemple /lbf qui révélation"); return end
@@ -506,16 +541,28 @@ local function chercher(mot)
 			for _, id in ipairs(x.ids or {}) do
 				local n = nomSort(id)
 				if n and string.find(plat(n), q, 1, true) then
-					if not trouves[n] then trouves[n] = {}; ordre[#ordre + 1] = n end
-					trouves[n][#trouves[n] + 1] = nom .. (x.rang and (" (" .. x.rang .. ")") or "")
+					if not trouves[n] then trouves[n] = { id = id, qui = {} }; ordre[#ordre + 1] = n end
+					table.insert(trouves[n].qui, { nom = nom, classe = m.classe, rang = x.rang })
 				end
 			end
 		end
 	end
 	if #ordre == 0 then dire("personne ne connaît « " .. mot .. " »."); return end
 	table.sort(ordre)
-	for k = 1, math.min(#ordre, 8) do dire(VERT .. ordre[k] .. "|r : " .. table.concat(trouves[ordre[k]], ", ")) end
-	if #ordre > 8 then dire(string.format("et %d autres, précise le nom.", #ordre - 8)) end
+	local attendre = false
+	for k = 1, math.min(#ordre, 8) do
+		if objetEnAttente(trouves[ordre[k]].id) then attendre = true end
+	end
+	C_Timer.After(attendre and 0.5 or 0, function()
+		for k = 1, math.min(#ordre, 8) do
+			local t = trouves[ordre[k]]
+			table.sort(t.qui, function(a, b) return (a.rang or 0) > (b.rang or 0) end)
+			local L = {}
+			for _, w in ipairs(t.qui) do L[#L + 1] = lienJoueur(w.nom, w.classe) .. (w.rang and (" (" .. w.rang .. ")") or "") end
+			dire(lienRecette(t.id, ordre[k]) .. " : " .. table.concat(L, ", "))
+		end
+		if #ordre > 8 then dire(string.format("et %d autres, précise le nom.", #ordre - 8)) end
+	end)
 end
 
 local function compte()
