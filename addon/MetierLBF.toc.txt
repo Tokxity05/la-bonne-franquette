@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: Métier LBF
+## Notes: La Bonne Franquette : partage tes métiers, tes recettes et tes recharges avec la guilde, pour le site « qui sait faire quoi ». /lbf
+## Author: Tokxity
+## Version: 1.0.0
+## IconTexture: Interface\Icons\INV_Misc_Book_11
+## SavedVariables: MetierLBFDB
+
+# WoW Forever 1.60.1 = interface 16001. Si le jeu affiche l'addon comme « périmé » après un patch : coche « Charger les addons périmés ».
+
+MetierLBF.lua
