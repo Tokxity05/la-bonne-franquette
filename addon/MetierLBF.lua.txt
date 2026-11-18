@@ -54,7 +54,7 @@ local function split(s, sep)
 end
 local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
-local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.7.1"
+local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.7.2"
 
 local function plusRecente(a, b)
 	local x, y = split(a or "0", "."), split(b or "0", ".")
@@ -125,6 +125,20 @@ local function metier(m, ligne)
 	return x
 end
 
+local function connu(id)
+	return oui(sur(IsPlayerSpell, id)) or oui(sur(IsSpellKnown, id)) or (C_SpellBook and oui(sur(C_SpellBook.IsSpellKnown, id))) or false
+end
+
+local function lireSpes()
+	local m = maFiche()
+	if not m then return end
+	local L = {}
+	for _, id in ipairs(SPES) do
+		if connu(id) then L[#L + 1] = id end
+	end
+	m.spes = L
+end
+
 local function lireRangs()
 	local m = maFiche()
 	if not m then return end
@@ -162,20 +176,6 @@ local function lireRangs()
 			x.nom, x.rang, x.max = texte(nom), nombre(rang), nombre(max) or x.max
 		end
 	end
-end
-
-local function connu(id)
-	return oui(sur(IsPlayerSpell, id)) or oui(sur(IsSpellKnown, id)) or (C_SpellBook and oui(sur(C_SpellBook.IsSpellKnown, id))) or false
-end
-
-local function lireSpes()
-	local m = maFiche()
-	if not m then return end
-	local L = {}
-	for _, id in ipairs(SPES) do
-		if connu(id) then L[#L + 1] = id end
-	end
-	m.spes = L
 end
 
 local function lireRecharges()
