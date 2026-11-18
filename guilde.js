@@ -65,7 +65,7 @@
   ];
 
   // site.json, mis en forme par lireSite (sans fichier : le nom de la guilde, et les rubriques connues ici)
-  let CFG = { nom: GUILDE_DEFAUT.nom, court: GUILDE_DEFAUT.court, accroche: null, presentation: [], rubriques: [], addons: [] };
+  let CFG = { nom: GUILDE_DEFAUT.nom, court: GUILDE_DEFAUT.court, accroche: null, presentation: [], rubriques: [], addons: [], rangs: {}, nouveautesMin: 200 };
   let R = null;            // data/membres.json : { membres, rangs, maj }
   let ERREUR_R = null;     // "lecture" ou "fichier"
   let D = null;            // data/guilde.json : les métiers de la guilde, une fois lus
@@ -773,6 +773,8 @@
       const jour = /^\d{4}-\d{2}-\d{2}/.test(String(e.date || "")) ? String(e.date).slice(0, 10) : null;
       if (e.type === "arrivee") { G.push({ type: "arrivee", jour, qui: e.qui }); continue; }
       const id = e.r != null ? String(e.r) : null;
+      // Les recettes de bas niveau (compétence requise sous site.json > nouveautes.competenceMin) ne font pas une nouveauté
+      if (id && D.recettes[id] && D.recettes[id].s != null && D.recettes[id].s < CFG.nouveautesMin) continue;
       const m = e.m || (id && D.recettes[id] ? D.recettes[id].m : null);
       const cle = `${jour}\n${e.qui}\n${m}`;
       let g = parCle.get(cle);
@@ -1316,6 +1318,7 @@
       rubriques: (s && Array.isArray(s.rubriques) ? s.rubriques : []).filter((r) => texte(r && r.titre) && bon(r))
         .map((r) => ({ id: r.id, titre: texte(r.titre), icone: texte(r.icone), desc: texte(r.desc) })),
       addons: [],
+      nouveautesMin: nombre(s && s.nouveautes && s.nouveautes.competenceMin) ?? 200,
       // Le nom des rangs, écrit à la main dans site.json (l'armurerie de Blizzard ne le donne pas) : il passe devant tout le reste
       rangs: s && s.rangs && typeof s.rangs === "object" && !Array.isArray(s.rangs)
         ? Object.fromEntries(Object.entries(s.rangs).filter(([k, v]) => /^\d+$/.test(k) && texte(v)).map(([k, v]) => [k, texte(v)])) : {},
