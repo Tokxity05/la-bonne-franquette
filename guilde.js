@@ -1,19 +1,29 @@
-/* Métier LBF : le site de la guilde La Bonne Franquette (World of Warcraft: Forever). « Qui sait faire quoi » dans la guilde.
-   Les données (data/guilde.json) viennent de l'addon Métier LBF des membres : métiers, rangs, recettes connues, recharges.
+/* Le site de la guilde La Bonne Franquette (LBF, World of Warcraft: Forever). « Métiers LBF » ne désigne que l'addon des métiers.
+   Trois fichiers, lus chacun de leur côté (un fichier absent n'éteint que sa rubrique) :
+     site.json            RÉDIGÉ : la guilde (nom, court, accroche, présentation), les rubriques de l'accueil et du menu, les addons
+     data/membres.json    les membres d'après l'armurerie officielle de Blizzard (niveau, race, rang, niveau d'objet, fiche officielle)
+     data/guilde.json     les métiers, d'après l'addon Métiers LBF des membres : rangs, recettes connues, recharges, historique, infos de l'addon
+   Une rubrique de plus = une entrée dans site.json > rubriques et sa page dans RUBRIQUES (plus bas) ; un addon de plus = une entrée dans
+   site.json > addons (menu, liste et page génériques ; une page propre se déclare dans PAGES_ADDONS).
    Site statique (GitHub Pages) : chemins relatifs, routage par hash, JavaScript sans bibliothèque.
-     #/                          Accueil (#/?q=… garde la recherche)
-     #/recette/<id>              une recette et qui sait la faire
-     #/membre/<nom>[/<métier>[/<recette>]]   la fenêtre de métier d'un membre, comme en jeu
+     #/                          Accueil de la guilde
+     #/membres[?q=…&classe=…&niv=60]   les membres
+     #/membre/<clé>[/<métier>[/<recette>]]   un membre : son profil, puis sa fenêtre de métier s'il partage ses métiers (clé = nom, nom-surnom si deux membres portent le même nom)
+     #/metiers[?q=…]             la rubrique Métiers : « Qui sait faire… ? », les métiers, les nouveautés, les derniers membres vus
      #/metier/<clé>              un métier : ses recettes dans la guilde, ses membres
-     #/addon                     l'addon : téléchargement, installation, mise à jour, nouveautés
+     #/recette/<id>              une recette et qui sait la faire
+     #/addons                    les addons de la guilde
+     #/addons/<id>               un addon (metier-lbf : transparence, téléchargement, nouveautés, commandes)
+   Anciennes adresses : #/addon -> #/addons/metier-lbf ; #/?q=… -> #/metiers?q=…
    Tout ce qui vient des données passe par textContent (jamais innerHTML) : les noms des membres viennent du jeu. */
 (() => {
   "use strict";
 
-  const DONNEES = "data/guilde.json";
+  const FICHIERS = { site: "site.json", membres: "data/membres.json", metiers: "data/guilde.json" };
   const ZIP_DEFAUT = "MetierLBF.zip";
-  const SITE = "Métier LBF";
-  const GUILDE_DEFAUT = "La Bonne Franquette";
+  const ADDON_METIERS = "metier-lbf";           // l'addon des métiers : ses infos viennent aussi de data/guilde.json > addon
+  const NOM_ADDON_METIERS = "Métiers LBF";   // repli : le nom affiché vient de site.json, puis de data/guilde.json > addon.nom
+  const GUILDE_DEFAUT = { nom: "La Bonne Franquette", court: "LBF" };
   const TZ = "Europe/Paris";
   const SURVOL = !window.matchMedia || window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   const ETROIT = window.matchMedia ? window.matchMedia("(max-width: 900px)") : { matches: false };
@@ -47,10 +57,15 @@
     ["toucher_pct", (v) => `Équipé : toucher +${v} %`], ["toucher_sorts_pct", (v) => `Équipé : toucher des sorts +${v} %`],
   ];
 
-  let D = null;            // les données de la guilde, une fois lues
-  let ADDON = null;        // le champ « addon » (même quand le carnet est vide)
-  let ERREUR = null;       // "vide", "lecture" ou "fichier"
+  // site.json, mis en forme par lireSite (sans fichier : le nom de la guilde, et les rubriques connues ici)
+  let CFG = { nom: GUILDE_DEFAUT.nom, court: GUILDE_DEFAUT.court, accroche: null, presentation: [], rubriques: [], addons: [] };
+  let R = null;            // data/membres.json : { membres, rangs, maj }
+  let ERREUR_R = null;     // "lecture" ou "fichier"
+  let D = null;            // data/guilde.json : les métiers de la guilde, une fois lus
+  let ADDON = null;        // le champ « addon » de data/guilde.json (même quand le carnet est vide)
+  let ERREUR = null;       // métiers : "vide", "lecture" ou "fichier"
   const IX = {};           // les index bâtis à la lecture
+  const FICHES = new Map(); // clé d'adresse -> { p (membres.json), m (guilde.json) }
 
   // ---------------------------------------------------------------- Petits outils
   function h(tag, attrs, ...enfants) {
@@ -85,9 +100,21 @@
   const classeCss = (m) => (CLASSES[m.classe] ? `c-${m.classe}` : "c-inconnue");
   const nomMetier = (cle) => (D && D.metiers[cle] && D.metiers[cle].nom) || (METIERS[cle] || [])[0] || cle;
   const iconeMetier = (cle) => (D && D.metiers[cle] && D.metiers[cle].icone) || (METIERS[cle] || [])[1] || "inv_misc_book_09";
-  const lienMembre = (m, ...suite) => `#/membre/${[m.nom, ...suite].map((x) => encodeURIComponent(String(x))).join("/")}`;
-  // Le niveau du perso n'est pas relevé par l'addon : la classe seule
-  const identite = (m) => CLASSES[m.classe] || "";
+  // m : un membre de guilde.json ou de membres.json ; sa clé d'adresse est posée par lier()
+  const lienMembre = (m, ...suite) => `#/membre/${[m.cle || m.nom, ...suite].map((x) => encodeURIComponent(String(x))).join("/")}`;
+  // L'addon ne relève pas le niveau du perso : il vient de l'armurerie quand le membre y est
+  const identite = (m) => [CLASSES[m.classe] || null, m.perso && m.perso.niveau ? `niveau ${m.perso.niveau}` : null].filter(Boolean).join(" · ");
+  const rubrique = (id) => CFG.rubriques.find((r) => r.id === id) || { id, titre: (defRubrique(id) || {}).titre || id, icone: null, desc: null };
+  // Le nom d'un rang : celui que l'addon a lu en jeu, sinon « Chef de guilde » pour 0 et « Rang N »
+  function nomRang(n) {
+    if (n == null || !Number.isFinite(Number(n))) return null;
+    const nom = R && R.rangs ? R.rangs[String(n)] : null;
+    return typeof nom === "string" && nom.trim() ? nom.trim() : Number(n) === 0 ? "Chef de guilde" : `Rang ${n}`;
+  }
+  // Une adresse de fiche officielle : https et le site de Blizzard seulement
+  function adresseOfficielle(u) {
+    try { const x = new URL(String(u)); return x.protocol === "https:" && /(^|\.)blizzard\.com$/i.test(x.hostname) ? x.href : null; } catch (e) { return null; }
+  }
   const majuscule = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
   // Les icônes du jeu (zamimg) ; un nom douteux devient le point d'interrogation
@@ -151,7 +178,7 @@
   function etatRecharge(m, id) {
     if (!m.recharges || typeof m.recharges !== "object") {
       const r = (D.recettes || {})[id] || {};
-      return { pret: false, reste: Number.MAX_SAFE_INTEGER, texte: r.cd ? `Recharge de ${dureeRecharge(r.cd)}` : "Recharge inconnue", titre: "Pas encore relevée par l'addon Métier LBF" };
+      return { pret: false, reste: Number.MAX_SAFE_INTEGER, texte: r.cd ? `Recharge de ${dureeRecharge(r.cd)}` : "Recharge inconnue", titre: `Pas encore relevée par l'addon ${nomAddonMetiers()}` };
     }
     const d = dateDe((m.recharges || {})[id]);
     const reste = d ? d.getTime() - Date.now() : 0;
@@ -223,11 +250,18 @@
       h("span", { class: "gd-logo-flotte" }, h("img", { class: "gd-logo", src: "img/wow-forever-logo.png", alt: "World of Warcraft: Forever", width: 360, height: 293 }),
         h("span", { class: "gd-logo-reflet", "aria-hidden": "true" })));
   }
-  function setTitre(t) { document.title = t ? `${t} · ${SITE}` : `${SITE} — ${(D && D.guilde) || GUILDE_DEFAUT}`; }
+  function setTitre(t) { document.title = t ? `${t} · ${CFG.court}` : `${CFG.nom} · ${CFG.court}`; }
   function fil(...etapes) {
     const L = [h("a", { href: "#/" }, "Accueil")];
     for (const e of etapes.filter(Boolean)) L.push(" › ", e);
     return h("nav", { class: "gd-fil", "aria-label": "Fil d'Ariane" }, L);
+  }
+  const filMetiers = (...etapes) => fil(h("a", { href: "#/metiers" }, rubrique("metiers").titre), ...etapes);
+  // L'en-tête d'une rubrique : son icône, son titre (site.json), une ligne, et ce qu'on veut à droite
+  function enteteRubrique(id, ligne, ...plus) {
+    const r = rubrique(id);
+    return h("section", { class: "frame gd-entete" }, h("div", { class: "gd-tete-metier gd-tete-rubrique" }, r.icone ? icone(r.icone, "xl") : null,
+      h("div", { class: "gd-tete-txt" }, h("h1", {}, r.titre), ligne ? h("p", {}, ligne) : null), plus));
   }
   // Le rang dans un métier en petite barre, la compétence du jeu en miniature
   function barreRang(x, titre) {
@@ -255,11 +289,22 @@
       h("span", { class: "gd-membre-id" }, h("span", { class: `gd-membre-nom ${classeCss(m)}` }, m.nom), h("span", { class: "gd-membre-sous" }, identite(m))),
       miniMetiers(m), h("span", { class: "gd-membre-vu" }, vu(m)));
   }
-  function infoAddon() {
-    const fichier = typeof (ADDON || {}).fichier === "string" && /^[\w.-]+(\/[\w.-]+)*\.zip$/i.test(ADDON.fichier) && !ADDON.fichier.includes("..") ? ADDON.fichier : ZIP_DEFAUT;
-    return { nom: (ADDON && typeof ADDON.nom === "string" && ADDON.nom) || SITE, version: ADDON && ADDON.version ? String(ADDON.version) : null, fichier,
-      maj: ADDON && ADDON.maj, nouveautes: ADDON && Array.isArray(ADDON.nouveautes) ? ADDON.nouveautes.filter((n) => n && (n.texte || n.version)) : [] };
+  // Un fichier à télécharger : un .zip du site, en chemin relatif, sans remontée
+  const fichierSur = (f) => (typeof f === "string" && /^[\w.-]+(\/[\w.-]+)*\.zip$/i.test(f) && !f.includes("..") ? f : null);
+  // Un addon : son entrée de site.json (le nom affiché vient d'elle) ; pour Métiers LBF, data/guilde.json > addon (écrit avec le zip)
+  // passe devant pour le fichier, la version et les nouveautés
+  function infoAddon(id = ADDON_METIERS) {
+    const a = CFG.addons.find((x) => x.id === id) || (id === ADDON_METIERS ? { id } : null);
+    if (!a) return null;
+    const G = id === ADDON_METIERS && ADDON ? ADDON : {};
+    const nouveautes = Array.isArray(G.nouveautes) ? G.nouveautes : Array.isArray(a.nouveautes) ? a.nouveautes : [];
+    return { id, nom: a.nom || (typeof G.nom === "string" && G.nom.trim()) || NOM_ADDON_METIERS, icone: a.icone || "inv_misc_book_11", desc: a.desc || null,
+      version: G.version || a.version ? String(G.version || a.version) : null, maj: G.maj || a.maj || null,
+      fichier: fichierSur(G.fichier) || fichierSur(a.fichier) || (id === ADDON_METIERS ? ZIP_DEFAUT : null),
+      nouveautes: nouveautes.filter((n) => n && (n.texte || n.version)) };
   }
+  const lienAddon = (id) => `#/addons/${encodeURIComponent(id)}`;
+  const nomAddonMetiers = () => (infoAddon(ADDON_METIERS) || {}).nom || NOM_ADDON_METIERS;
 
   // Le détail d'une recette, comme le côté droit de la fenêtre de métier : icône ronde, nom, effet ou stats, composants, compétence
   function lignesStats(st) {
@@ -311,23 +356,171 @@
   }
 
   // ---------------------------------------------------------------- Le menu du haut
-  function dessinerMenu(page, cleMetier) {
-    const metiers = D ? listeMetiers() : [];
-    const lien = (href, texte, actif) => h("a", { class: `gd-lien${actif ? " actif" : ""}`, href, "aria-current": actif ? "page" : null }, texte);
+  // Accueil, puis les rubriques de site.json que ce fichier sait dessiner (RUBRIQUES), dans leur ordre.
+  // Une rubrique qui a des liens directs (Métiers, Addons) : son nom mène à sa page ; la flèche, ou le survol à la souris, déroule ses liens
+  function dessinerMenu(page, params) {
+    const lien = (href, nom, actif, courant) => h("a", { class: `gd-lien${actif ? " actif" : ""}`, href, "aria-current": courant ? "page" : null }, nom);
+    const items = [lien("#/", "Accueil", page === "", page === "")];
+    for (const r of rubriquesConnues()) {
+      const def = defRubrique(r.id);
+      const actif = aSoi(def.routes, page), courant = page === Object.keys(def.routes)[0] && !params.length;
+      const liens = def.panneau ? def.panneau(actif && def.sous ? def.sous(page, params) : null) : [];
+      if (!liens.length) { items.push(lien(def.href, r.titre, actif, courant)); continue; }
+      const id = `gd-panneau-${r.id}`;
+      items.push(h("div", { class: `gd-deroule${actif ? " actif" : ""}` },
+        lien(def.href, r.titre, false, courant),
+        h("button", { type: "button", class: "gd-ouvrir", "aria-expanded": "false", "aria-controls": id, "aria-label": `${r.titre} : ouvrir la liste`, onclick: basculerMenu },
+          h("span", { class: "gd-fleche", "aria-hidden": "true" }, "▾")),
+        h("div", { class: `gd-panneau${liens.length < 4 ? " une-colonne" : ""}`, id }, liens)));
+    }
     fill(document.getElementById("menu"), h("div", { class: "gd-menu-in" },
-      h("a", { class: "gd-marque", href: "#/" }, h("img", { class: "gd-marque-logo", src: "img/wow-forever-logo.png", alt: "", width: 36, height: 29 }), h("span", { class: "gd-marque-txt" }, h("span", { class: "gd-marque-nom" }, SITE), h("span", { class: "gd-marque-sous" }, (D && D.guilde) || GUILDE_DEFAUT))),
-      h("nav", { class: "gd-nav", "aria-label": "Menu" },
-        lien("#/", "Accueil", page === ""),
-        metiers.length ? h("details", { class: `gd-deroule${page === "metier" ? " actif" : ""}` },
-          h("summary", { class: "gd-lien" }, "Métiers", h("span", { class: "gd-fleche", "aria-hidden": "true" }, "▾")),
-          h("div", { class: "gd-panneau" }, metiers.map((cle) => h("a", { class: `gd-panneau-lien${cle === cleMetier ? " actif" : ""}`, href: `#/metier/${encodeURIComponent(cle)}`,
-            onclick: fermerMenu }, icone(iconeMetier(cle), "sm"), h("span", {}, nomMetier(cle)), h("span", { class: "gd-compte", title: pl((IX.parMetier.get(cle) || []).length, "membre") },
-            (IX.parMetier.get(cle) || []).length))))) : null,
-        lien("#/addon", "L'addon", page === "addon"))));
+      h("a", { class: "gd-marque", href: "#/" }, h("img", { class: "gd-marque-logo", src: "img/wow-forever-logo.png", alt: "", width: 36, height: 29 }),
+        h("span", { class: "gd-marque-txt" }, h("span", { class: "gd-marque-nom" }, CFG.court), h("span", { class: "gd-marque-sous" }, CFG.nom))),
+      h("nav", { class: "gd-nav", "aria-label": "Menu" }, items)));
   }
-  function fermerMenu() { for (const d of document.querySelectorAll(".gd-deroule[open]")) d.removeAttribute("open"); }
+  const lienPanneau = (href, ic, nom, droite, actif) => h("a", { class: `gd-panneau-lien${actif ? " actif" : ""}`, href, "aria-current": actif ? "page" : null, onclick: fermerMenu },
+    icone(ic, "sm"), h("span", {}, nom), droite);
+  function basculerMenu(e) {
+    const d = e.currentTarget.parentElement, ouvrir = !d.classList.contains("ouvert");
+    fermerMenu();
+    if (ouvrir) { d.classList.add("ouvert"); e.currentTarget.setAttribute("aria-expanded", "true"); }
+  }
+  function fermerMenu() {
+    for (const d of document.querySelectorAll(".gd-deroule.ouvert")) {
+      d.classList.remove("ouvert");
+      const b = d.querySelector(".gd-ouvrir");
+      if (b) b.setAttribute("aria-expanded", "false");
+    }
+  }
 
-  // ---------------------------------------------------------------- Accueil
+  // ---------------------------------------------------------------- Accueil de la guilde
+  const nomClasse = (c) => CLASSES[c] || "Classe inconnue";
+  function pageAccueil() {
+    setTitre(null);
+    const nouveautes = D || ERREUR === "vide" ? blocNouveautes("Dernières nouveautés des métiers", 6, "#/metiers?voir=nouveautes") : null;
+    vue.append(
+      h("div", { class: "gd-hero" }, logoHero(), h("h1", {}, CFG.nom), CFG.accroche ? h("p", { class: "gd-hero-guilde" }, CFG.accroche) : null,
+        h("div", { class: "gd-separateur", "aria-hidden": "true" }),
+        CFG.presentation.map((p) => h("p", { class: "gd-hero-presentation" }, p)),
+        blocChiffres()),
+      h("div", { class: "stack" }, tuilesRubriques(), nouveautes));
+  }
+  // Quelques chiffres de l'armurerie : les membres, ceux du niveau 60, les classes en petite barre (un clic sur une classe filtre la liste)
+  function blocChiffres() {
+    const M = R ? R.membres : [];
+    if (!M.length) return null;
+    const n60 = M.filter((p) => p.niveau >= 60).length;
+    const compte = new Map();
+    for (const p of M) compte.set(p.classe, (compte.get(p.classe) || 0) + 1);
+    const classes = [...compte].sort((a, b) => b[1] - a[1] || nomClasse(a[0]).localeCompare(nomClasse(b[0]), "fr"));
+    const css = (c) => (CLASSES[c] ? `c-${c}` : "c-inconnue");
+    const chiffre = (href, n, mot) => h("a", { class: "gd-chiffre", href }, h("b", {}, n), h("span", {}, mot));
+    return h("div", { class: "gd-chiffres" },
+      h("div", { class: "gd-chiffres-ligne" }, chiffre("#/membres", M.length, M.length > 1 ? "membres" : "membre"), chiffre("#/membres?niv=60", n60, "au niveau 60")),
+      h("div", { class: "gd-classes" },
+        h("div", { class: "gd-classes-barre", role: "img", "aria-label": `Les classes de la guilde : ${classes.map(([c, n]) => `${nomClasse(c)} ${n}`).join(", ")}` },
+          classes.map(([c, n]) => h("span", { class: css(c), style: { flexGrow: String(n) }, title: `${nomClasse(c)} : ${n}` }))),
+        h("ul", { class: "gd-classes-legende" }, classes.map(([c, n]) => h("li", {},
+          h("a", { href: `#/membres?classe=${encodeURIComponent(c)}` }, h("span", { class: `gd-rond ${css(c)}`, "aria-hidden": "true" }), nomClasse(c), h("b", {}, n)))))));
+  }
+  // Les rubriques en grandes tuiles, d'après site.json : icône, titre, une ligne, un chiffre
+  function tuilesRubriques() {
+    const L = rubriquesConnues();
+    if (!L.length) return null;
+    return h("nav", { class: "gd-rubriques", "aria-label": "Les rubriques" }, L.map((r) => {
+      const def = RUBRIQUES[r.id], n = def.compte ? def.compte() : null;
+      return h("a", { class: "gd-tuile gd-rubrique", href: def.href }, r.icone ? icone(r.icone, "lg") : null, h("span", { class: "gd-tuile-nom" }, r.titre),
+        r.desc ? h("span", { class: "gd-rubrique-desc" }, r.desc) : null, n ? h("span", { class: "gd-rubrique-chiffre" }, n) : null);
+    }));
+  }
+
+  // ---------------------------------------------------------------- Les membres (data/membres.json, l'armurerie officielle)
+  // La liste : les membres de l'armurerie, puis ceux qui partagent leurs métiers sans y être encore
+  function listeRoster() {
+    const L = R ? [...R.membres] : [];
+    if (D) for (const m of D.membres) if (!m.perso) L.push({ nom: m.nom, surnom: null, classe: m.classe, niveau: null, race: null, rang: null, ilvl: null, cle: m.cle, partage: m, horsArmurerie: true });
+    return L;
+  }
+  const parRangPerso = (a, b) => (a.rang == null ? 99 : a.rang) - (b.rang == null ? 99 : b.rang) || (b.niveau || 0) - (a.niveau || 0) || a.nom.localeCompare(b.nom, "fr");
+  function pageMembres(params) {
+    const titre = rubrique("membres").titre;
+    setTitre(titre);
+    const tous = listeRoster().sort(parRangPerso);
+    const maj = R && R.maj ? dateLongue(R.maj) : null;
+    const ligne = R ? `D'après l'armurerie officielle de Blizzard${maj ? `, mise à jour le ${maj}` : ""}.`
+      : ERREUR_R ? "La liste de l'armurerie officielle n'a pas pu être lue : seuls les membres qui partagent leurs métiers sont là." : null;
+    vue.append(fil(h("span", {}, titre)), enteteRubrique("membres", ligne));
+    if (!tous.length) {
+      vue.append(h("div", { class: "stack" }, cadre(null, h("div", { class: "gd-vide" }, h("p", {}, ERREUR_R === "fichier"
+        ? "Le navigateur refuse de lire les données depuis un fichier de ton disque : ouvre le site par son adresse web."
+        : "La liste des membres n'a pas pu être lue. Réessaie dans un instant.")))));
+      return;
+    }
+    // L'état des filtres vit dans l'adresse (#/membres?q=…&classe=…&niv=60) : un lien partagé garde la même vue
+    const etat = { q: params.get("q") || "", classe: CLASSES[params.get("classe")] || params.get("classe") === "inconnue" ? params.get("classe") : "", n60: params.get("niv") === "60" };
+    const classes = [...new Set(tous.map((p) => (CLASSES[p.classe] ? p.classe : "inconnue")))].sort((a, b) => (CLASSES[a] || "~").localeCompare(CLASSES[b] || "~", "fr"));
+    const champ = h("input", { type: "search", class: "lv-cherche gd-membres-cherche", value: etat.q, placeholder: "Chercher un nom…", "aria-label": "Chercher un membre par son nom",
+      autocomplete: "off", spellcheck: "false", enterkeyhint: "search" });
+    const b60 = h("button", { type: "button", class: "gd-pastille gd-bascule" });
+    const pastilles = h("div", { class: "gd-pastilles", role: "group", "aria-label": "Filtrer par classe" });
+    const compte = h("p", { class: "gd-roster-compte", "aria-live": "polite" });
+    const liste = h("ul", { class: "gd-roster" });
+    const garde = (p, sauf) => (sauf === "classe" || !etat.classe || (CLASSES[p.classe] ? p.classe : "inconnue") === etat.classe)
+      && (sauf === "n60" || !etat.n60 || p.niveau >= 60)
+      && (!etat.q.trim() || plat(etat.q).trim().split(" ").every((w) => plat(`${p.nom} ${p.surnom || ""}`).includes(w)));
+    function adresse() {
+      const u = new URLSearchParams();
+      if (etat.q.trim()) u.set("q", etat.q.trim());
+      if (etat.classe) u.set("classe", etat.classe);
+      if (etat.n60) u.set("niv", "60");
+      const s = u.toString();
+      history.replaceState(null, "", `#/membres${s ? `?${s}` : ""}`);
+    }
+    function dessiner() {
+      const vus = tous.filter((p) => garde(p));
+      const avant = tous.filter((p) => garde(p, "classe"));
+      const pastille = (cle, nom, n, css) => h("button", { type: "button", class: `gd-pastille${etat.classe === cle ? " actif" : ""}`, "aria-pressed": String(etat.classe === cle),
+        "data-cle": cle, onclick: () => { etat.classe = etat.classe === cle || !cle ? "" : cle; adresse(); dessiner(); } },
+        css ? h("span", { class: `gd-rond ${css}`, "aria-hidden": "true" }) : null, nom, h("b", {}, n));
+      // Les pastilles sont redessinées : celle qui avait le focus le garde (clavier)
+      const focus = pastilles.contains(document.activeElement) ? document.activeElement.getAttribute("data-cle") : null;
+      fill(pastilles, pastille("", "Toutes", avant.length, null),
+        classes.map((c) => pastille(c, c === "inconnue" ? "Inconnue" : CLASSES[c], avant.filter((p) => (CLASSES[p.classe] ? p.classe : "inconnue") === c).length, c === "inconnue" ? "c-inconnue" : `c-${c}`)));
+      if (focus != null) { const b = [...pastilles.children].find((x) => x.getAttribute("data-cle") === focus); if (b) b.focus(); }
+      fill(b60, "Niveau 60", h("b", {}, tous.filter((p) => garde(p, "n60") && p.niveau >= 60).length));
+      b60.classList.toggle("actif", etat.n60);
+      b60.setAttribute("aria-pressed", String(etat.n60));
+      fill(compte, vus.length === tous.length ? pl(tous.length, "membre") : `${vus.length} sur ${pl(tous.length, "membre")}`);
+      fill(liste, vus.length ? vus.map(lignePerso) : h("li", { class: "gd-roster-vide" }, h("p", {}, "Aucun membre ne correspond."),
+        h("button", { type: "button", class: "btn ghost", onclick: () => { etat.q = ""; etat.classe = ""; etat.n60 = false; champ.value = ""; adresse(); dessiner(); champ.focus(); } }, "Tout afficher")));
+    }
+    b60.addEventListener("click", () => { etat.n60 = !etat.n60; adresse(); dessiner(); });
+    champ.addEventListener("input", () => { etat.q = champ.value; adresse(); dessiner(); });
+    champ.addEventListener("keydown", (e) => { if (e.key === "Escape" && champ.value) { e.preventDefault(); champ.value = ""; etat.q = ""; adresse(); dessiner(); } });
+    dessiner();
+    vue.append(h("div", { class: "stack" }, h("section", { class: "frame gd-roster-cadre" },
+      h("div", { class: "gd-roster-outils" }, champ, b60, compte), pastilles, liste)));
+  }
+  // Un membre : nom à la couleur de sa classe et surnom, niveau, race et classe, rang, niveau d'objet, puis ses métiers partagés et sa fiche officielle
+  function lignePerso(p) {
+    const officielle = adresseOfficielle(p.armurerie);
+    const m = p.partage;
+    const chiffre = (n, mot, cls) => h("span", { class: `gd-perso-chiffre ${cls}` }, n != null ? h("b", {}, n) : h("b", { class: "muted" }, "—"), h("small", {}, mot));
+    return h("li", { class: "gd-perso" },
+      h("div", { class: "gd-perso-id" }, h("a", { class: `gd-perso-nom ${classeCss(p)}`, href: lienMembre(p) }, p.nom), p.surnom ? h("span", { class: "gd-perso-surnom" }, p.surnom) : null),
+      chiffre(p.niveau, "niveau", "gd-perso-niv"),
+      h("div", { class: "gd-perso-race" }, h("span", {}, p.race || (p.horsArmurerie ? "Pas encore dans l'armurerie" : "—")), h("small", {}, nomClasse(p.classe))),
+      h("div", { class: "gd-perso-rang" }, nomRang(p.rang) ? h("span", { class: `gd-rang-badge${Number(p.rang) === 0 ? " chef" : ""}` }, nomRang(p.rang)) : null),
+      chiffre(p.ilvl, "niv. d'objet", "gd-perso-ilvl"),
+      h("div", { class: "gd-perso-liens" },
+        m ? h("a", { class: "gd-badge-metiers", href: lienMembre(p), title: m.metiers.map((x) => `${nomMetier(x.cle)}${x.rang != null ? ` ${x.rang}/${x.max || "?"}` : ""}`).join(", ") || null },
+          h("span", { class: "gd-badge-icones", "aria-hidden": "true" }, m.metiers.slice(0, 3).map((x) => icone(iconeMetier(x.cle), "xs"))), "Métiers partagés") : null,
+        officielle ? lienOfficiel(officielle, p) : null));
+  }
+  const lienOfficiel = (href, p, cls = "gd-officielle") => h("a", { class: cls, href, target: "_blank", rel: "noopener", title: `La fiche de ${p.nom} sur l'armurerie officielle de Blizzard (nouvel onglet)` },
+    "Fiche officielle", h("span", { class: "gd-ext", "aria-hidden": "true" }, " ↗"));
+
+  // ---------------------------------------------------------------- Métiers : la rubrique
   function chercher(texte) {
     const q = plat(texte).trim();
     if (q.length < 2) return null;
@@ -391,7 +584,7 @@
       autocomplete: "off", spellcheck: "false", enterkeyhint: "search" });
     const maj = () => {
       const q = champ.value.trim();
-      history.replaceState(null, "", q ? `#/?q=${encodeURIComponent(q)}` : "#/");
+      history.replaceState(null, "", q ? `#/metiers?q=${encodeURIComponent(q)}` : "#/metiers");
       dessinerResultats(resultats, champ.value);
       infobulles();
     };
@@ -408,10 +601,26 @@
       h("p", { class: "muted small", style: { margin: "0 0 8px" } },"Le nom d'une recette, d'un composant ou d'un membre, sans te soucier des accents."),
       champ, resultats);
   }
-  function pageAccueil(q) {
-    setTitre(null);
-    const nRec = IX.recherche.recettes.length;
+  // L'encart de l'addon des métiers : son nom, sa version, le lien vers sa page
+  function encartAddon() {
     const A = infoAddon();
+    return A ? h("a", { class: "gd-encart", href: lienAddon(A.id) }, icone(A.icone, "sm"), h("b", {}, A.version ? `${A.nom} ${A.version}` : A.nom), h("span", {}, "· Télécharger")) : null;
+  }
+  // Le carnet des métiers vide ou illisible : ce qu'il faut faire
+  function carnetVide() {
+    const texte = ERREUR === "fichier"
+      ? "Le navigateur refuse de lire les données depuis un fichier de ton disque : ouvre le site par son adresse web."
+      : ERREUR === "lecture"
+        ? "Les métiers de la guilde n'ont pas pu être lus. Réessaie dans un instant."
+        : `Aucun membre n'a encore partagé ses métiers. Installe l'addon ${nomAddonMetiers()} et ouvre une fois chacun de tes métiers en jeu : le carnet se remplira au prochain relais.`;
+    return h("div", { class: "stack" }, cadre("Le carnet est encore vide", h("div", { class: "gd-vide" }, h("p", {}, texte), h("a", { class: "btn", href: lienAddon(ADDON_METIERS) }, "Télécharger l'addon"))));
+  }
+  function pageMetiers(q, voir) {
+    const titre = rubrique("metiers").titre;
+    setTitre(titre);
+    if (!D) { vue.append(fil(h("span", {}, titre)), enteteRubrique("metiers", rubrique("metiers").desc, encartAddon()), carnetVide()); return; }
+    const nouveautes = blocNouveautes("Les dernières nouveautés", 30);
+    const nRec = IX.recherche.recettes.length;
     const resume = [pl(D.membres.length, "membre"), `${nRec} recette${nRec > 1 ? "s" : ""} connue${nRec > 1 ? "s" : ""}`, D.maj && quand(D.maj) ? `mis à jour ${quand(D.maj)}` : null].filter(Boolean).join(", ");
     const metiers = listeMetiers();
     const tries = [...D.membres].sort((a, b) => ((dateDe(b.vu || b.maj) || 0) - (dateDe(a.vu || a.maj) || 0)) || a.nom.localeCompare(b.nom, "fr"));
@@ -419,10 +628,8 @@
     const montrer = (n) => fill(liste, tries.slice(0, n).map(ligneMembre),
       tries.length > n ? h("button", { type: "button", class: "gd-plus", onclick: () => montrer(tries.length) }, `Voir les ${tries.length} membres`) : null);
     montrer(8);
-    vue.append(
-      h("div", { class: "gd-hero" }, logoHero(), h("h1", {}, SITE), h("p", { class: "gd-hero-guilde" }, D.guilde || GUILDE_DEFAUT), h("div", { class: "gd-separateur", "aria-hidden": "true" }),
-        h("p", { class: "gd-hero-resume" }, majuscule(resume)),
-        h("a", { class: "gd-encart", href: "#/addon" }, icone("inv_misc_book_11", "sm"), h("b", {}, A.version ? `${A.nom} ${A.version}` : A.nom), h("span", {}, "· Télécharger"))),
+    vue.append(fil(h("span", {}, titre)),
+      enteteRubrique("metiers", majuscule(resume), encartAddon()),
       h("div", { class: "stack" },
         blocRecherche(q),
         metiers.length ? cadre("Les métiers de la guilde", h("div", { class: "gd-tuiles" }, metiers.map((cle) => {
@@ -434,23 +641,88 @@
             h("span", { class: "gd-tuile-info" }, [pl(L.length, "membre"), nR ? pl(nR, "recette") : null].filter(Boolean).join(" · ")),
             meilleur ? h("span", { class: "gd-tuile-info" }, `meilleur rang ${meilleur.x.rang}${meilleur.x.max ? `/${meilleur.x.max}` : ""}`) : null);
         }))) : null,
-        blocNouveautes(),
+        nouveautes,
         cadre("Derniers membres vus", liste)));
+    // « Tout voir » de l'accueil (#/metiers?voir=nouveautes) : la page s'ouvre sur les nouveautés
+    if (voir) setTimeout(() => nouveautes.scrollIntoView({ block: "start" }), 0);
   }
-  // Les dernières nouveautés du carnet (historique, le plus récent en tête) : arrivées et recettes apprises ; caché s'il est vide
-  function blocNouveautes() {
-    const L = D.historique.slice(0, 10);
-    if (!L.length) return null;
-    const membre = (nom) => D.membres.find((m) => m.nom === nom);
-    return cadre("Les dernières nouveautés", h("ul", { class: "gd-histo" }, L.map((e) => {
-      const m = membre(e.qui);
-      const qui = m ? h("a", { class: `gd-membre-nom ${classeCss(m)}`, href: lienMembre(m) }, e.qui) : h("b", {}, e.qui);
-      const r = e.r != null ? D.recettes[String(e.r)] : null;
-      const texte = e.type === "arrivee" ? [qui, " a rejoint le carnet"]
-        : [qui, " sait faire ", r ? lienRecette(String(e.r), r.n, `q-${couleurNom(r)}`) : "une nouvelle recette", !r && e.m ? ` (${nomMetier(e.m)})` : null];
-      return h("li", {}, h("span", { class: "gd-histo-date" }, majuscule((quandJour(e.date) || "").replace(/^le /, ""))), h("span", { class: "gd-histo-txt" }, texte),
-        e.type === "recette" && e.neuf ? h("span", { class: "gd-badge-neuf" }, "Nouveau pour la guilde") : null);
-    })));
+
+  // Les dernières nouveautés des métiers (data/guilde.json > historique, le plus récent en tête), en groupes :
+  // les recettes d'un même membre, d'un même métier et d'un même jour sur une ligne ; une arrivée sur la sienne
+  function groupesHistorique() {
+    if (!D) return [];
+    const G = [], parCle = new Map();
+    const L = D.historique.map((e, i) => ({ e, i })).sort((a, b) => String(b.e.date || "").localeCompare(String(a.e.date || "")) || a.i - b.i);
+    for (const { e } of L) {
+      const jour = /^\d{4}-\d{2}-\d{2}/.test(String(e.date || "")) ? String(e.date).slice(0, 10) : null;
+      if (e.type === "arrivee") { G.push({ type: "arrivee", jour, qui: e.qui }); continue; }
+      const id = e.r != null ? String(e.r) : null;
+      const m = e.m || (id && D.recettes[id] ? D.recettes[id].m : null);
+      const cle = `${jour}\n${e.qui}\n${m}`;
+      let g = parCle.get(cle);
+      if (!g) { g = { type: "recette", jour, qui: e.qui, m, recettes: [] }; parCle.set(cle, g); G.push(g); }
+      if (!id || !g.recettes.some((x) => x.id === id)) g.recettes.push({ id, neuf: e.neuf === true });
+    }
+    // Les recettes nouvelles pour la guilde d'abord : elles restent visibles quand la ligne se replie sur trois
+    for (const g of G) if (g.recettes) g.recettes.sort((a, b) => b.neuf - a.neuf);
+    return G;
+  }
+  // « aujourd'hui », « hier », « il y a 3 jours » (jours de Paris) ; au-delà d'un mois, « le 3 octobre »
+  function ilYa(jour) {
+    if (!jour) return "";
+    const n = Math.round((Date.parse(`${fJour.format(new Date())}T00:00:00Z`) - Date.parse(`${jour}T00:00:00Z`)) / 864e5);
+    return n === 0 ? "aujourd'hui" : n === 1 ? "hier" : n > 1 && n <= 30 ? `il y a ${n} jours` : quandJour(jour) || "";
+  }
+  const fDateComplete = new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const dateComplete = (jour) => (jour ? majuscule(jourFr(fDateComplete, new Date(`${jour}T12:00:00Z`))) : null);
+  // « d'Enchantement », « de Couture »
+  const deMetier = (nom) => (/^[aeiouyàâäéèêëîïôöùûüh]/i.test(nom) ? `d'${nom}` : `de ${nom}`);
+  // Un nom de l'historique : le membre qui partage ses métiers, sinon celui de l'armurerie s'il n'y en a qu'un de ce nom
+  function membreDe(nom) {
+    const m = D && D.membres.find((x) => x.nom === nom);
+    if (m) return m;
+    const L = R ? R.membres.filter((p) => p.nom === nom) : [];
+    return L.length === 1 ? L[0] : null;
+  }
+  function ligneHistorique(g) {
+    const x = membreDe(g.qui);
+    const qui = x ? h("a", { class: `gd-histo-qui ${classeCss(x)}`, href: lienMembre(x) }, g.qui) : h("b", { class: "gd-histo-qui" }, g.qui);
+    const date = h("time", { class: "gd-histo-date", datetime: g.jour, title: dateComplete(g.jour) }, ilYa(g.jour));
+    if (g.type === "arrivee") {
+      const ic = x && Array.isArray(x.metiers) && x.metiers.length ? iconeMetier(x.metiers[0].cle) : "inv_misc_book_11";
+      return h("li", { class: "gd-histo-ligne arrivee" }, h("span", { class: "gd-histo-ic" }, icone(ic, "md")),
+        h("div", { class: "gd-histo-corps" }, h("p", { class: "gd-histo-phrase" }, qui, " partage maintenant ses métiers")), date);
+    }
+    const n = g.recettes.length;
+    const recette = ({ id, neuf }) => {
+      const r = id ? D.recettes[id] : null;
+      return h("span", { class: "gd-histo-rec" }, r ? lienRecette(id, [icone(r.i, "xs", r.k === "spell" ? null : r.q), h("span", {}, r.n)], `q-${couleurNom(r)}`)
+        : h("span", { class: "muted" }, "une recette pas encore dans le carnet"), neuf ? h("span", { class: "gd-badge-neuf" }, "Nouveau pour la guilde") : null);
+    };
+    const noms = h("span", { class: "gd-histo-recettes" });
+    const montrer = (tout) => {
+      fill(noms, (tout ? g.recettes : g.recettes.slice(0, 3)).map(recette), !tout && n > 3
+        ? h("button", { type: "button", class: "gd-histo-plus", "aria-label": `Voir les ${n - 3} autres recettes`, onclick: () => {
+          montrer(true); infobulles();
+          const a = noms.children[3] && noms.children[3].querySelector("a");
+          if (a) a.focus();
+        } }, `+${n - 3}`) : null);
+    };
+    montrer(false);
+    const neufs = g.recettes.filter((r) => r.neuf).length;
+    return h("li", { class: `gd-histo-ligne${neufs ? " neuf" : ""}` }, h("span", { class: "gd-histo-ic" }, icone(iconeMetier(g.m), "md")),
+      h("div", { class: "gd-histo-corps" }, h("p", { class: "gd-histo-phrase" }, qui, ` a appris ${n > 1 ? `${n} recettes` : "une recette"}`, g.m ? ` ${deMetier(nomMetier(g.m))}` : null), noms),
+      date);
+  }
+  // Le bloc : au plus max groupes ; vide, une phrase (le bloc reste, pour qu'on sache qu'il existe) ; « Tout voir » vers la rubrique Métiers
+  function blocNouveautes(titre, max, tout) {
+    const G = groupesHistorique();
+    const bloc = cadre(titre, G.length ? h("ul", { class: "gd-histo" }, G.slice(0, max).map(ligneHistorique))
+      : h("p", { class: "gd-histo-vide" }, "Les nouvelles recettes apprises par les membres apparaîtront ici."));
+    bloc.classList.add("gd-nouveautes-metiers");
+    if (G.length && tout) bloc.append(h("a", { class: "gd-voir", href: tout }, "Tout voir ›"));
+    else if (G.length > max) bloc.append(h("p", { class: "gd-histo-note" }, `Les ${max} dernières.`));
+    return bloc;
   }
 
   // ---------------------------------------------------------------- Une recette
@@ -459,8 +731,8 @@
     const r = D.recettes[id];
     if (!r) {
       setTitre("Recette inconnue");
-      vue.append(fil(), cadre("Recette inconnue", h("div", { class: "gd-vide" }, h("p", {}, "Personne dans la guilde ne connaît cette recette, ou elle n'est pas encore dans le carnet."),
-        h("a", { class: "btn", href: "#/" }, "Chercher une recette"))));
+      vue.append(filMetiers(), cadre("Recette inconnue", h("div", { class: "gd-vide" }, h("p", {}, "Personne dans la guilde ne connaît cette recette, ou elle n'est pas encore dans le carnet."),
+        h("a", { class: "btn", href: "#/metiers" }, "Chercher une recette"))));
       return;
     }
     setTitre(r.n);
@@ -468,7 +740,7 @@
     const qui = [...(IX.quiSait.get(id) || [])];
     if (r.cd) qui.sort((a, b) => etatRecharge(a.m, id).reste - etatRecharge(b.m, id).reste || parRang(a, b));
     vue.append(
-      fil(h("a", { href: `#/metier/${encodeURIComponent(r.m)}` }, nomMetier(r.m)), cat ? h("span", {}, cat.nom) : null),
+      filMetiers(h("a", { href: `#/metier/${encodeURIComponent(r.m)}` }, nomMetier(r.m)), cat ? h("span", {}, cat.nom) : null),
       h("div", { class: "lv-fenetre lv-seule" },
         h("div", { class: "lv-entete" }, h("span", { class: "lv-portrait" }, icone(iconeMetier(r.m), "lg")),
           h("div", { class: "lv-entete-txt" }, h("a", { class: "lv-titre-nom", href: `#/metier/${encodeURIComponent(r.m)}` }, cat ? `${nomMetier(r.m)} · ${cat.nom}` : nomMetier(r.m)))),
@@ -484,28 +756,58 @@
         })) : h("p", { class: "muted center" }, "Plus personne ne la connaît dans le carnet."))));
   }
 
-  // ---------------------------------------------------------------- Un membre : sa fenêtre de métier, comme en jeu
+  // ---------------------------------------------------------------- Un membre : son profil (l'armurerie), puis sa fenêtre de métier, comme en jeu
+  // La clé de l'adresse (lier) ; sinon la même sans accents ni casse ; sinon un nom seul que plusieurs membres portent : le premier, les autres en lien
+  function trouverMembre(cle) {
+    const k = plat(cle);
+    const homonymes = (nom, f) => listeRoster().filter((p) => plat(p.nom) === plat(nom) && p.cle !== f).sort(parRangPerso);
+    const f = FICHES.has(cle) ? cle : [...FICHES.keys()].find((c) => plat(c) === k);
+    if (f) { const x = FICHES.get(f); return { ...x, homonymes: homonymes((x.p || x.m).nom, f) }; }
+    const L = listeRoster().filter((p) => plat(p.nom) === k).sort(parRangPerso);
+    if (!L.length) return null;
+    const x = L.find((p) => p.partage) || L[0];
+    return { p: x.horsArmurerie ? null : x, m: x.partage || null, homonymes: L.filter((p) => p !== x) };
+  }
   function pageMembre(params) {
-    const nom = params[0] || "";
-    const m = D.membres.find((x) => x.nom === nom) || D.membres.find((x) => plat(x.nom) === plat(nom));
-    if (!m) {
+    const cle = params[0] || "";
+    const t = trouverMembre(cle);
+    const filMembres = (...etapes) => fil(h("a", { href: "#/membres" }, rubrique("membres").titre), ...etapes);
+    if (!t) {
       setTitre("Membre introuvable");
-      vue.append(fil(), cadre("Membre introuvable", h("div", { class: "gd-vide" }, h("p", {}, `Personne du nom de « ${nom} » dans le carnet de la guilde.`),
-        h("a", { class: "btn", href: "#/" }, "Retour à l'accueil"))));
+      vue.append(filMembres(), cadre("Membre introuvable", h("div", { class: "gd-vide" }, h("p", {}, `Personne du nom de « ${cle} » dans la guilde.`),
+        h("a", { class: "btn", href: "#/membres" }, "Voir les membres"))));
       return;
     }
-    setTitre(m.nom);
-    const artisanat = m.metiers.filter(avecRecettes);
-    const autres = m.metiers.filter((x) => !artisanat.includes(x));
-    vue.append(fil(h("span", {}, m.nom)),
+    const { p, m, homonymes } = t;
+    const qui = p || m;
+    setTitre(qui.nom);
+    const artisanat = m ? m.metiers.filter(avecRecettes) : [];
+    const autres = m ? m.metiers.filter((x) => !artisanat.includes(x)) : [];
+    const officielle = p ? adresseOfficielle(p.armurerie) : null;
+    const fait = (titre, valeur) => (valeur != null && valeur !== "" ? h("div", { class: "gd-fait" }, h("dt", {}, titre), h("dd", {}, valeur)) : null);
+    const vuLe = m ? quand(m.vu || m.maj) : null;
+    vue.append(filMembres(h("span", {}, qui.nom)),
       h("section", { class: "frame gd-entete" },
-        h("div", { class: "gd-tete-membre" }, h("h1", { class: classeCss(m) }, m.nom), h("span", { class: "gd-membre-sous" }, [identite(m), vu(m)].filter(Boolean).join(" · "))),
+        h("div", { class: "gd-tete-membre" }, h("h1", { class: classeCss(qui) }, qui.nom), p && p.surnom ? h("span", { class: "gd-tete-surnom" }, p.surnom) : null,
+          p ? null : h("span", { class: "gd-membre-sous" }, [identite(m), vu(m)].filter(Boolean).join(" · "))),
+        // D'après l'armurerie : classe, niveau, race, rang, niveau d'objet, et la fiche officielle
+        p ? h("div", { class: "gd-profil" },
+          h("dl", { class: "gd-faits" }, fait("Classe", h("span", { class: classeCss(p) }, nomClasse(p.classe))), fait("Niveau", p.niveau), fait("Race", p.race),
+            fait("Rang", nomRang(p.rang)), fait("Niveau d'objet", p.ilvl), fait("Vu par l'addon", vuLe)),
+          officielle ? lienOfficiel(officielle, p, "btn ghost gd-officielle-btn") : null) : null,
+        homonymes.length ? h("p", { class: "gd-homonymes" }, homonymes.length > 1 ? "D'autres membres portent ce nom : " : "Un autre membre porte ce nom : ",
+          homonymes.map((x, i) => [i ? ", " : null, h("a", { class: classeCss(x), href: lienMembre(x) }, x.surnom ? `${x.nom} ${x.surnom}` : x.nom)])) : null,
         autres.length ? h("div", { class: "gd-autres" }, h("span", {}, artisanat.length ? "Ses autres métiers :" : "Ses métiers :"), autres.map((x) => h("a", { class: "gd-autre", href: `#/metier/${encodeURIComponent(x.cle)}` },
           icone(iconeMetier(x.cle), "sm"), nomMetier(x.cle), h("i", {}, x.rang != null ? `${x.rang}/${x.max || "?"}` : "rang inconnu"),
           RECOLTE.has(x.cle) ? null : h("i", {}, "· recettes pas encore relevées")))) : null));
+    if (!m) {
+      vue.append(h("p", { class: "gd-pas-partage" }, ERREUR === "lecture" || ERREUR === "fichier" ? "Les métiers de la guilde n'ont pas pu être lus pour l'instant."
+        : ["Il ne partage pas encore ses métiers : ", h("a", { href: lienAddon(ADDON_METIERS) }, `l'addon ${nomAddonMetiers()} ›`)]));
+      return;
+    }
     if (!artisanat.length) {
       vue.append(h("p", { class: "muted center", style: { marginTop: "24px" } }, m.metiers.length
-        ? "Aucune recette relevée pour l'instant : il suffit d'ouvrir une fois chaque fenêtre de métier en jeu, avec l'addon Métier LBF."
+        ? `Aucune recette relevée pour l'instant : il suffit d'ouvrir une fois chacun de ses métiers en jeu, avec l'addon ${nomAddonMetiers()}.`
         : "Aucun métier relevé pour l'instant."));
       return;
     }
@@ -612,7 +914,7 @@
     cle = String(cle || "");
     if (!listeMetiers().includes(cle)) {
       setTitre("Métier introuvable");
-      vue.append(fil(), cadre("Métier introuvable", h("div", { class: "gd-vide" }, h("p", {}, "Personne dans la guilde n'a ce métier pour l'instant."), h("a", { class: "btn", href: "#/" }, "Retour à l'accueil"))));
+      vue.append(filMetiers(), cadre("Métier introuvable", h("div", { class: "gd-vide" }, h("p", {}, "Personne dans la guilde n'a ce métier pour l'instant."), h("a", { class: "btn", href: "#/metiers" }, "Tous les métiers"))));
       return;
     }
     setTitre(nomMetier(cle));
@@ -660,7 +962,7 @@
         barreRang(x), n ? h("span", { class: "gd-nbrec" }, pl(n, "recette")) : null);
     })));
     blocMembres.classList.add("gd-metier-membres");
-    vue.append(fil(h("span", {}, nomMetier(cle))),
+    vue.append(filMetiers(h("span", {}, nomMetier(cle))),
       h("section", { class: "frame gd-entete" }, h("div", { class: "gd-tete-metier" }, icone(iconeMetier(cle), "xl"),
         h("div", {}, h("h1", {}, nomMetier(cle)), h("p", {}, [pl(membres.length, "membre"), ids.length ? `${ids.length} recette${ids.length > 1 ? "s" : ""} connue${ids.length > 1 ? "s" : ""} dans la guilde` : null].filter(Boolean).join(" · "))))),
       h("div", { class: "gd-metier" }, blocRecettes, blocMembres));
@@ -673,16 +975,60 @@
     for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0);
     return 0;
   }
-  function pageAddon() {
-    setTitre("L'addon");
-    const A = infoAddon();
+  const filAddons = (...etapes) => fil(h("a", { href: "#/addons" }, rubrique("addons").titre), ...etapes);
+  // Le téléchargement d'un addon : le bouton, la version et sa date, une ligne
+  function blocTelecharger(A, texte) {
     const date = A.version && A.maj ? dateLongue(A.maj) : null;
-    const nouveautes = [...A.nouveautes].sort((a, b) => (dateDe(b.date) || 0) - (dateDe(a.date) || 0) || compareVersions(b.version, a.version));
+    return cadre("Télécharger", h("div", { class: "gd-telecharger" },
+      A.fichier ? h("a", { class: "btn gd-gros-bouton", href: A.fichier, download: "" }, icone(A.icone, "md"), "Télécharger l'addon")
+        : h("p", { class: "muted" }, "Pas encore de fichier à télécharger."),
+      A.version ? h("p", { class: "gd-version" }, "Version ", h("b", {}, A.version), date ? ` · ${date}` : null) : null,
+      texte ? h("p", { class: "gd-texte muted" }, texte) : null));
+  }
+  // Les nouveautés d'un addon en frise, la plus récente en tête
+  function blocNouveautesAddon(A) {
+    const L = [...A.nouveautes].sort((a, b) => (dateDe(b.date) || 0) - (dateDe(a.date) || 0) || compareVersions(b.version, a.version));
+    return L.length ? cadre("Nouveautés", h("ul", { class: "gd-nouveautes" }, L.map((n) => h("li", {},
+      h("div", { class: "gd-nv-tete" }, n.version ? h("b", {}, `Version ${n.version}`) : null, dateLongue(n.date) ? h("span", { class: "gd-nv-date" }, dateLongue(n.date)) : null),
+      n.texte ? h("p", {}, Array.isArray(n.texte) ? n.texte.join(" ") : String(n.texte)) : null)))) : null;
+  }
+  // #/addons : les addons de site.json en cartes
+  function pageAddons() {
+    const titre = rubrique("addons").titre;
+    setTitre(titre);
+    vue.append(fil(h("span", {}, titre)), enteteRubrique("addons", rubrique("addons").desc));
+    if (!CFG.addons.length) { vue.append(h("div", { class: "stack" }, cadre(null, h("p", { class: "muted center" }, "Aucun addon pour l'instant.")))); return; }
+    vue.append(h("div", { class: "gd-addons" }, CFG.addons.map((a) => {
+      const A = infoAddon(a.id);
+      const date = A.version && A.maj ? dateLongue(A.maj) : null;
+      return h("article", { class: "frame gd-addon" },
+        h("div", { class: "gd-addon-tete" }, icone(A.icone, "lg"), h("div", { class: "gd-addon-txt" }, h("h2", {}, h("a", { href: lienAddon(A.id) }, A.nom)),
+          A.version ? h("p", { class: "gd-version" }, "Version ", h("b", {}, A.version), date ? ` · ${date}` : null) : null)),
+        A.desc ? h("p", { class: "gd-addon-desc" }, A.desc) : null,
+        h("div", { class: "gd-addon-actions" }, A.fichier ? h("a", { class: "btn", href: A.fichier, download: "" }, "Télécharger") : null,
+          h("a", { class: "btn ghost", href: lienAddon(A.id) }, "En savoir plus ›")));
+    })));
+  }
+  // #/addons/<id> : la page propre de l'addon (PAGES_ADDONS), sinon la page générique d'après site.json
+  function pageUnAddon(id) {
+    const A = infoAddon(id);
+    if (!A) { pageIntrouvable(filAddons()); return; }
+    (Object.prototype.hasOwnProperty.call(PAGES_ADDONS, id) ? PAGES_ADDONS[id] : pageAddonGenerique)(A);
+  }
+  function pageAddonGenerique(A) {
+    setTitre(A.nom);
+    vue.append(filAddons(h("span", {}, A.nom)),
+      h("div", { class: "gd-hero gd-hero-petit" }, h("h1", {}, A.nom), h("div", { class: "gd-separateur", "aria-hidden": "true" }), A.desc ? h("p", { class: "gd-hero-resume" }, A.desc) : null),
+      h("div", { class: "stack" }, blocTelecharger(A), blocNouveautesAddon(A)));
+  }
+  // #/addons/metier-lbf : l'addon des métiers, en toute transparence (le fond de addon/LISEZMOI.txt)
+  function pageAddonMetiers(A) {
+    setTitre(A.nom);
     const point = (titre, ...contenu) => h("div", { class: "gd-point" }, h("h3", {}, titre), contenu);
     const doc = (href, texte) => h("a", { class: "btn ghost", href, target: "_blank", rel: "noopener" }, texte);
-    vue.append(
+    vue.append(filAddons(h("span", {}, A.nom)),
       h("div", { class: "gd-hero gd-hero-petit" }, h("h1", {}, `L'addon ${A.nom}`), h("div", { class: "gd-separateur", "aria-hidden": "true" }),
-        h("p", { class: "gd-hero-resume" }, "Il partage tes métiers avec la guilde : c'est lui qui remplit ce site.")),
+        h("p", { class: "gd-hero-resume" }, "Il partage tes métiers avec la guilde : c'est lui qui remplit la rubrique Métiers du site.")),
       h("div", { class: "stack" },
         // D'abord ce qu'il fait, et seulement ça (le fond de addon/LISEZMOI.txt)
         cadre("En toute transparence",
@@ -694,25 +1040,20 @@
               h("p", { class: "muted small" }, "Ce que tes compagnons voient déjà quand tu leur montres ta fenêtre de métier : l'addon le rassemble au même endroit.")),
             h("div", { class: "gd-non" }, h("h3", {}, "Ce qu'il ne fait jamais"),
               h("ul", {}, h("li", {}, "Il ne lit ni tes sacs, ni ta banque, ni ton or."), h("li", {}, "Ni ta position, ni tes quêtes, ni tes discussions."),
-                h("li", {}, "Ni le niveau de ton personnage, ni ton équipement."),
+                h("li", {}, "Ni le niveau de ton personnage, ni ton équipement (la rubrique Membres les prend sur l'armurerie officielle de Blizzard, qui est publique)."),
                 h("li", {}, "Il n'envoie rien sur internet : il parle seulement aux addons des membres, par le canal caché de la guilde, comme le font DBM ou Details."),
                 h("li", {}, "Il ne touche à rien dans le jeu : il lit ta fenêtre de métier quand tu l'ouvres, sans rien y changer, et jamais en combat.")))),
           h("div", { class: "gd-points" },
-            point("Comment le site est mis à jour", h("p", {}, "Chaque exemplaire garde ce que les autres membres lui envoient. Celui d'un officier fait le relais : à sa déconnexion, il publie le carnet ici. Tu apparais donc sur le site après avoir été connecté en même temps que lui."),
-              h("p", {}, "L'addon lit aussi la liste des membres de la guilde, sur place, sans l'envoyer : ceux qui partent disparaissent du site.")),
+            point("Comment les métiers sont mis à jour", h("p", {}, "Chaque exemplaire garde ce que les autres membres lui envoient. Celui d'un officier fait le relais : à sa déconnexion, il publie le carnet ici. Tes métiers apparaissent donc sur le site après avoir été connecté en même temps que lui."),
+              h("p", {}, "L'addon lit aussi la liste des membres de la guilde, sur place, sans l'envoyer : ceux qui partent disparaissent du site. Il y prend le nom des rangs de la guilde, pour la rubrique Membres.")),
             point("Il ne ralentit pas le jeu", h("p", {}, "Rien en continu : une lecture quand tu ouvres une fenêtre de métier, et l'envoi de ta fiche à la connexion ou quand tu apprends une recette, en quelques petits messages espacés.")),
             point("Tu restes maître", h("p", {}, "Un bouton rond près de la mini-carte montre que l'addon tourne : au survol, ce qui est partagé et si le partage est actif ; clic droit pour le mettre en pause (l'icône devient grise)."), h("p", {}, h("code", {}, "/lbf pause"), " : plus rien ne part, et ta fiche s'efface chez les autres. ", h("code", {}, "/lbf reprendre"), " relance le partage."),
-              h("p", {}, "Pour disparaître aussi du site, mets l'addon en pause et préviens un officier. Personne n'est obligé de l'installer.")),
+              h("p", {}, "Pour que tes métiers disparaissent aussi du site, mets l'addon en pause et préviens un officier. Personne n'est obligé de l'installer.")),
             point("Vérifier par toi-même", h("p", {}, "Le code est en clair : tu peux le lire ici, ou dans le zip avec le Bloc-notes."),
               h("div", { class: "gd-docs" }, doc("addon/LISEZMOI.txt", "Lire le LISEZMOI"), doc("addon/MetierLBF.lua.txt", "Lire le code de l'addon"))))),
-        cadre("Télécharger", h("div", { class: "gd-telecharger" },
-          h("a", { class: "btn gd-gros-bouton", href: A.fichier, download: "" }, icone("inv_misc_book_11", "md"), "Télécharger l'addon"),
-          A.version ? h("p", { class: "gd-version" }, "Version ", h("b", {}, A.version), date ? ` · ${date}` : null) : null,
-          // Melvin (18/11) : « les gens savent installer un addon » ; reste la seule chose propre à celui-ci
-          h("p", { class: "gd-texte muted" }, "Une fois installé, ouvre une fois chacune de tes fenêtres de métier : c'est tout."))),
-        nouveautes.length ? cadre("Nouveautés", h("ul", { class: "gd-nouveautes" }, nouveautes.map((n) => h("li", {},
-          h("div", { class: "gd-nv-tete" }, n.version ? h("b", {}, `Version ${n.version}`) : null, dateLongue(n.date) ? h("span", { class: "gd-nv-date" }, dateLongue(n.date)) : null),
-          n.texte ? h("p", {}, Array.isArray(n.texte) ? n.texte.join(" ") : String(n.texte)) : null)))) : null,
+        // Melvin (18/11) : « les gens savent installer un addon » ; reste la seule chose propre à celui-ci
+        blocTelecharger(A, "Une fois installé, ouvre une fois chacun de tes métiers : c'est tout."),
+        blocNouveautesAddon(A),
         cadre("Les commandes", h("dl", { class: "gd-commandes" },
           h("dt", {}, h("code", {}, "/lbf")), h("dd", {}, "Ce que l'addon partage, et combien de membres sont dans ton carnet."),
           h("dt", {}, h("code", {}, "/lbf qui <recette>")), h("dd", {}, "Qui sait faire cette recette, en jeu (par exemple : /lbf qui révélation)."),
@@ -722,60 +1063,147 @@
           h("dt", {}, h("code", {}, "/lbf bouton")), h("dd", {}, "Cacher ou remettre le bouton de la mini-carte.")))));
   }
 
-  // ---------------------------------------------------------------- Pages sans données
-  function pageVide() {
-    setTitre(null);
-    const texte = ERREUR === "fichier"
-      ? "Le navigateur refuse de lire les données depuis un fichier de ton disque : ouvre le site par son adresse web."
-      : ERREUR === "lecture"
-        ? "Les données de la guilde n'ont pas pu être lues. Réessaie dans un instant."
-        : "Aucun membre n'a encore partagé ses métiers. Installe l'addon Métier LBF et ouvre une fois chacune de tes fenêtres de métier en jeu : le carnet se remplira au prochain relais.";
-    vue.append(h("div", { class: "gd-hero" }, logoHero(), h("h1", {}, SITE), h("p", { class: "gd-hero-guilde" }, GUILDE_DEFAUT), h("div", { class: "gd-separateur", "aria-hidden": "true" })),
-      cadre("Le carnet est encore vide", h("div", { class: "gd-vide" }, h("p", {}, texte), h("a", { class: "btn", href: "#/addon" }, "Télécharger l'addon"))));
-  }
-  function pageIntrouvable() {
+  function pageIntrouvable(filAriane) {
     setTitre("Page introuvable");
-    vue.append(cadre("Page introuvable", h("div", { class: "gd-vide" }, h("p", {}, "Cette adresse ne mène nulle part."), h("a", { class: "btn", href: "#/" }, "Retour à l'accueil"))));
+    ajouter(vue, [filAriane, cadre("Page introuvable", h("div", { class: "gd-vide" }, h("p", {}, "Cette adresse ne mène nulle part."), h("a", { class: "btn", href: "#/" }, "Retour à l'accueil")))]);
+  }
+
+  // ---------------------------------------------------------------- Les rubriques et les pages
+  // Une rubrique de site.json n'apparaît (menu, tuiles de l'accueil) que si elle est ici. routes : la première est sa page principale ;
+  // sous : l'élément de son panneau à allumer ; panneau : ses liens directs dans le menu ; compte : le chiffre de sa tuile.
+  // Ses routes marchent même quand site.json ne la cite pas.
+  const RUBRIQUES = {
+    membres: {
+      titre: "Membres", href: "#/membres",
+      routes: { membres: (p, q) => pageMembres(q), membre: (p) => pageMembre(p) },
+      compte: () => { const n = listeRoster().length; return n ? pl(n, "membre") : null; },
+    },
+    metiers: {
+      titre: "Métiers", href: "#/metiers",
+      routes: { metiers: (p, q) => pageMetiers(q.get("q") || "", q.get("voir") === "nouveautes"), metier: (p) => (D ? pageMetier(p[0]) : pageMetiers("")), recette: (p) => (D ? pageRecette(p[0]) : pageMetiers("")) },
+      compte: () => (D && IX.recherche.recettes.length ? pl(IX.recherche.recettes.length, "recette") : null),
+      sous: (page, p) => (page === "metier" ? p[0] : null),
+      panneau: (sous) => (D ? listeMetiers().map((cle) => {
+        const n = (IX.parMetier.get(cle) || []).length;
+        return lienPanneau(`#/metier/${encodeURIComponent(cle)}`, iconeMetier(cle), nomMetier(cle), h("span", { class: "gd-compte", title: pl(n, "membre") }, n), cle === sous);
+      }) : []),
+    },
+    addons: {
+      titre: "Addons", href: "#/addons",
+      routes: { addons: (p) => (p[0] ? pageUnAddon(p[0]) : pageAddons()) },
+      compte: () => (CFG.addons.length ? pl(CFG.addons.length, "addon") : null),
+      sous: (page, p) => p[0] || null,
+      // Rempli par site.json > addons : un addon ajouté au fichier entre dans le menu de lui-même
+      panneau: (sous) => CFG.addons.map((a) => {
+        const A = infoAddon(a.id);
+        return lienPanneau(lienAddon(a.id), A.icone, A.nom, A.version ? h("span", { class: "gd-panneau-note" }, A.version) : null, a.id === sous);
+      }),
+    },
+  };
+  // Les addons qui ont une page à eux ; les autres prennent la page générique (site.json : icône, nom, ligne, fichier)
+  const PAGES_ADDONS = { [ADDON_METIERS]: pageAddonMetiers };
+  const aSoi = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  const defRubrique = (id) => (aSoi(RUBRIQUES, id) ? RUBRIQUES[id] : null);
+  // Les rubriques de site.json dans leur ordre ; sans site.json lisible, toutes celles d'ici
+  const rubriquesConnues = () => (CFG.rubriques.length ? CFG.rubriques : Object.keys(RUBRIQUES).map(rubrique)).filter((r) => defRubrique(r.id));
+
+  // ---------------------------------------------------------------- Les données : site.json, membres.json, guilde.json
+  const texte = (v) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const nombre = (v) => (v === "" || v == null || typeof v === "boolean" || !Number.isFinite(Number(v)) ? null : Number(v));
+  function lireSite(s) {
+    const g = s && s.guilde && typeof s.guilde === "object" ? s.guilde : {};
+    const vus = new Set();
+    const bon = (x) => x && typeof x.id === "string" && /^[a-z0-9-]+$/.test(x.id) && !vus.has(x.id) && vus.add(x.id);
+    CFG = {
+      nom: texte(g.nom) || GUILDE_DEFAUT.nom, court: texte(g.court) || GUILDE_DEFAUT.court, accroche: texte(g.accroche),
+      presentation: Array.isArray(g.presentation) ? g.presentation.map(texte).filter(Boolean) : texte(g.presentation) ? [texte(g.presentation)] : [],
+      rubriques: (s && Array.isArray(s.rubriques) ? s.rubriques : []).filter((r) => texte(r && r.titre) && bon(r))
+        .map((r) => ({ id: r.id, titre: texte(r.titre), icone: texte(r.icone), desc: texte(r.desc) })),
+      addons: [],
+    };
+    vus.clear();
+    CFG.addons = (s && Array.isArray(s.addons) ? s.addons : []).filter((a) => texte(a && a.nom) && bon(a))
+      .map((a) => ({ ...a, nom: texte(a.nom), icone: texte(a.icone), desc: texte(a.desc) }))
+      .sort((a, b) => (b.id === ADDON_METIERS) - (a.id === ADDON_METIERS));   // Métiers LBF d'abord
+  }
+  function lireMembres(d) {
+    const M = (d && Array.isArray(d.membres) ? d.membres : []).filter((p) => p && texte(p.nom)).map((p) => ({
+      nom: texte(p.nom), surnom: texte(p.surnom), niveau: nombre(p.niveau), classe: texte(p.classe), race: texte(p.race), rang: nombre(p.rang), ilvl: nombre(p.ilvl),
+      armurerie: texte(p.armurerie) }));
+    R = { membres: M, rangs: d && d.rangs && typeof d.rangs === "object" && !Array.isArray(d.rangs) ? d.rangs : {}, maj: d && d.maj };
+  }
+  // Relie un membre de guilde.json à sa fiche de l'armurerie (même nom, même classe) et donne à chacun sa clé d'adresse :
+  // le nom, ou nom-surnom quand plusieurs membres de l'armurerie portent le même nom
+  function lier() {
+    FICHES.clear();
+    const prises = new Set();
+    const unique = (base) => { let k = base, i = 2; while (prises.has(plat(k))) k = `${base}-${i++}`; prises.add(plat(k)); return k; };
+    const roster = R ? R.membres : [];
+    const parNom = new Map();
+    for (const p of roster) pousser(parNom, plat(p.nom), p);
+    for (const p of roster) {
+      p.cle = unique(parNom.get(plat(p.nom)).length > 1 && p.surnom ? `${p.nom}-${p.surnom}` : p.nom);
+      FICHES.set(p.cle, { p, m: null });
+    }
+    for (const m of D ? D.membres : []) {
+      const L = (parNom.get(plat(m.nom)) || []).filter((p) => !p.partage && (!m.classe || !p.classe || p.classe === m.classe)
+        && (!texte(m.surnom) || plat(p.surnom) === plat(m.surnom)));
+      const p = L.length === 1 ? L[0] : null;
+      if (p) { p.partage = m; m.perso = p; m.cle = p.cle; FICHES.get(p.cle).m = m; }
+      else { m.cle = unique(m.nom); FICHES.set(m.cle, { p: null, m }); }
+    }
   }
 
   // ---------------------------------------------------------------- Routeur
   const vue = document.getElementById("vue");
   function lireAdresse() {
     let brut = location.hash.replace(/^#\/?/, "");
-    let q = "";
+    let q = new URLSearchParams();
     const i = brut.indexOf("?");
-    if (i >= 0) { q = new URLSearchParams(brut.slice(i + 1)).get("q") || ""; brut = brut.slice(0, i); }
+    if (i >= 0) { q = new URLSearchParams(brut.slice(i + 1)); brut = brut.slice(0, i); }
     const parts = brut.split("/").filter(Boolean).map((s) => { try { return decodeURIComponent(s); } catch (e) { return s; } });
     return { parts, q };
   }
+  // Une ancienne adresse : remplacée dans l'historique, sans laisser de pas en arrière
+  function rediriger(hash) { history.replaceState(null, "", hash); router(); }
   function router() {
     const { parts, q } = lireAdresse();
     const [page = "", ...params] = parts;
+    // Les anciennes adresses : la page de l'addon, et la recherche qui était sur l'accueil
+    if (page === "addon") { rediriger(lienAddon(ADDON_METIERS)); return; }
+    if (page === "" && (q.get("q") || "").trim()) { rediriger(`#/metiers?q=${encodeURIComponent(q.get("q").trim())}`); return; }
     fermerMenu();
-    dessinerMenu(page, page === "metier" ? params[0] : null);
+    dessinerMenu(page, params);
     vue.textContent = "";
-    if (page === "addon") pageAddon();
-    else if (!D) pageVide();
-    else if (page === "") pageAccueil(q);
-    else if (page === "recette") pageRecette(params[0]);
-    else if (page === "membre") pageMembre(params);
-    else if (page === "metier") pageMetier(params[0]);
+    const def = Object.values(RUBRIQUES).find((r) => aSoi(r.routes, page));
+    if (page === "") pageAccueil();
+    else if (def) def.routes[page](params, q);
     else pageIntrouvable();
     infobulles();
   }
 
+  async function lire(url) {
+    const rep = await fetch(url, { cache: "no-cache" });
+    if (!rep.ok) throw new Error(`HTTP ${rep.status}`);
+    return rep.json();
+  }
   async function demarrer() {
-    vue.append(h("p", { class: "gd-chargement" }, "Lecture du carnet de la guilde…"));
-    try {
-      const rep = await fetch(DONNEES, { cache: "no-cache" });
-      if (!rep.ok) throw new Error(`HTTP ${rep.status}`);
-      const d = await rep.json();
+    vue.append(h("p", { class: "gd-chargement" }, "Ouverture des registres de la guilde…"));
+    const panne = () => (location.protocol === "file:" ? "fichier" : "lecture");
+    const [s, mb, mt] = await Promise.allSettled([lire(FICHIERS.site), lire(FICHIERS.membres), lire(FICHIERS.metiers)]);
+    lireSite(s.status === "fulfilled" ? s.value : null);
+    try { if (mb.status === "fulfilled") lireMembres(mb.value); else ERREUR_R = panne(); } catch (e) { R = null; ERREUR_R = "lecture"; }
+    if (mt.status === "fulfilled") {
+      const d = mt.value;
       ADDON = d && typeof d.addon === "object" ? d.addon : null;
-      if (d && Array.isArray(d.membres) && d.membres.some((m) => m && m.nom)) preparer(d);
-      else ERREUR = "vide";
-    } catch (e) {
-      ERREUR = location.protocol === "file:" ? "fichier" : "lecture";
-    }
+      try {
+        if (d && Array.isArray(d.membres) && d.membres.some((m) => m && m.nom)) preparer(d);
+        else ERREUR = "vide";
+      } catch (e) { D = null; ERREUR = "lecture"; }
+    } else ERREUR = panne();
+    // Sans site.json lisible, l'addon des métiers reste au menu (d'après data/guilde.json)
+    if (s.status !== "fulfilled" && ADDON) CFG.addons = [{ id: ADDON_METIERS, nom: texte(ADDON.nom) || NOM_ADDON_METIERS }];
+    lier();
     router();
     window.addEventListener("hashchange", () => {
       router();
@@ -784,9 +1212,17 @@
     });
   }
 
-  // Le menu déroulant se ferme d'un clic ailleurs ou avec Échap ; le lien d'évitement mène au contenu sans toucher à l'adresse
-  document.addEventListener("click", (e) => { const d = document.querySelector(".gd-deroule[open]"); if (d && !d.contains(e.target)) d.removeAttribute("open"); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") fermerMenu(); });
+  // Le menu déroulant se ferme d'un clic ailleurs ou avec Échap (le focus revient sur sa flèche) ;
+  // le lien d'évitement mène au contenu sans toucher à l'adresse
+  document.addEventListener("click", (e) => { const d = document.querySelector(".gd-deroule.ouvert"); if (d && !d.contains(e.target)) fermerMenu(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const d = document.querySelector(".gd-deroule.ouvert");
+    if (!d) return;
+    const dedans = d.contains(document.activeElement);
+    fermerMenu();
+    if (dedans) { const b = d.querySelector(".gd-ouvrir"); if (b) b.focus(); }
+  });
   const saut = document.querySelector(".gd-saut");
   if (saut) saut.addEventListener("click", (e) => { e.preventDefault(); vue.focus(); });
 
