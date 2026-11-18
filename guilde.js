@@ -309,7 +309,7 @@
     const metiers = D ? listeMetiers() : [];
     const lien = (href, texte, actif) => h("a", { class: `gd-lien${actif ? " actif" : ""}`, href, "aria-current": actif ? "page" : null }, texte);
     fill(document.getElementById("menu"), h("div", { class: "gd-menu-in" },
-      h("a", { class: "gd-marque", href: "#/" }, h("span", { class: "gd-marque-nom" }, SITE), h("span", { class: "gd-marque-sous" }, (D && D.guilde) || GUILDE_DEFAUT)),
+      h("a", { class: "gd-marque", href: "#/" }, h("img", { class: "gd-marque-logo", src: "img/wow-forever-logo.png", alt: "", width: 36, height: 29 }), h("span", { class: "gd-marque-txt" }, h("span", { class: "gd-marque-nom" }, SITE), h("span", { class: "gd-marque-sous" }, (D && D.guilde) || GUILDE_DEFAUT))),
       h("nav", { class: "gd-nav", "aria-label": "Menu" },
         lien("#/", "Accueil", page === ""),
         metiers.length ? h("details", { class: `gd-deroule${page === "metier" ? " actif" : ""}` },
@@ -414,7 +414,7 @@
       tries.length > n ? h("button", { type: "button", class: "gd-plus", onclick: () => montrer(tries.length) }, `Voir les ${tries.length} membres`) : null);
     montrer(8);
     vue.append(
-      h("div", { class: "gd-hero" }, h("h1", {}, SITE), h("p", { class: "gd-hero-guilde" }, D.guilde || GUILDE_DEFAUT), h("div", { class: "rune-divider" }),
+      h("div", { class: "gd-hero" }, h("img", { class: "gd-logo", src: "img/wow-forever-logo.png", alt: "World of Warcraft: Forever", width: 360, height: 293 }), h("h1", {}, SITE), h("p", { class: "gd-hero-guilde" }, D.guilde || GUILDE_DEFAUT), h("div", { class: "rune-divider" }),
         h("p", { class: "gd-hero-resume" }, majuscule(resume)),
         h("a", { class: "gd-encart", href: "#/addon" }, icone("inv_misc_book_11", "sm"), h("b", {}, A.version ? `${A.nom} ${A.version}` : A.nom), h("span", {}, "· Télécharger"))),
       h("div", { class: "stack" },
@@ -697,18 +697,9 @@
               h("div", { class: "gd-docs" }, doc("addon/LISEZMOI.txt", "Lire le LISEZMOI"), doc("addon/MetierLBF.lua.txt", "Lire le code de l'addon"))))),
         cadre("Télécharger", h("div", { class: "gd-telecharger" },
           h("a", { class: "btn gd-gros-bouton", href: A.fichier, download: "" }, icone("inv_misc_book_11", "md"), "Télécharger l'addon"),
-          A.version ? h("p", { class: "gd-version" }, "Version ", h("b", {}, A.version), date ? ` · ${date}` : null) : null)),
-        cadre("Installer en trois étapes", h("ol", { class: "gd-etapes" },
-          h("li", {}, h("p", {}, "Décompresse le fichier dans le dossier des addons du jeu : ", h("code", {}, String.raw`World of Warcraft\_forever_\Interface\AddOns\ `.trim())),
-            h("p", { class: "muted small" }, "Le dossier MetierLBF doit s'y trouver directement : ", h("code", {}, String.raw`…\AddOns\MetierLBF`), ", et non ",
-              h("code", {}, String.raw`…\AddOns\MetierLBF\MetierLBF`), ".")),
-          h("li", {}, h("p", {}, "Sur l'écran de choix du personnage, ouvre « AddOns » et coche « Métier LBF »."),
-            h("p", { class: "muted small" }, "S'il est grisé, coche aussi « Charger les addons périmés ».")),
-          h("li", {}, h("p", {}, "En jeu, ouvre une fois chacune de tes fenêtres de métier."),
-            h("p", { class: "muted small" }, "L'addon relève alors tes recettes et les partage. Tu n'as rien d'autre à faire.")))),
-        cadre("Mettre à jour", h("div", { class: "gd-texte" },
-          h("p", {}, "Télécharge le nouveau zip et décompresse-le au même endroit, en remplaçant l'ancien dossier MetierLBF, puis relance le jeu."),
-          h("p", { class: "muted" }, "L'addon te prévient en jeu quand un autre membre a une version plus récente que la tienne."))),
+          A.version ? h("p", { class: "gd-version" }, "Version ", h("b", {}, A.version), date ? ` · ${date}` : null) : null,
+          // Melvin (18/11) : « les gens savent installer un addon » ; reste la seule chose propre à celui-ci
+          h("p", { class: "gd-texte muted" }, "Une fois installé, ouvre une fois chacune de tes fenêtres de métier : c'est tout."))),
         nouveautes.length ? cadre("Nouveautés", h("ul", { class: "gd-nouveautes" }, nouveautes.map((n) => h("li", {},
           h("div", { class: "gd-nv-tete" }, n.version ? h("b", {}, `Version ${n.version}`) : null, dateLongue(n.date) ? h("span", { class: "gd-nv-date" }, dateLongue(n.date)) : null),
           n.texte ? h("p", {}, Array.isArray(n.texte) ? n.texte.join(" ") : String(n.texte)) : null)))) : null,
@@ -728,8 +719,8 @@
       : ERREUR === "lecture"
         ? "Les données de la guilde n'ont pas pu être lues. Réessaie dans un instant."
         : "Aucun membre n'a encore partagé ses métiers. Installe l'addon Métier LBF et ouvre une fois chacune de tes fenêtres de métier en jeu : le carnet se remplira au prochain relais.";
-    vue.append(h("div", { class: "gd-hero" }, h("h1", {}, SITE), h("p", { class: "gd-hero-guilde" }, GUILDE_DEFAUT), h("div", { class: "rune-divider" })),
-      cadre("Le carnet est encore vide", h("div", { class: "gd-vide" }, h("p", {}, texte), h("a", { class: "btn", href: "#/addon" }, "L'addon et son installation"))));
+    vue.append(h("div", { class: "gd-hero" }, h("img", { class: "gd-logo", src: "img/wow-forever-logo.png", alt: "World of Warcraft: Forever", width: 360, height: 293 }), h("h1", {}, SITE), h("p", { class: "gd-hero-guilde" }, GUILDE_DEFAUT), h("div", { class: "rune-divider" })),
+      cadre("Le carnet est encore vide", h("div", { class: "gd-vide" }, h("p", {}, texte), h("a", { class: "btn", href: "#/addon" }, "Télécharger l'addon"))));
   }
   function pageIntrouvable() {
     setTitre("Page introuvable");
