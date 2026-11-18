@@ -52,11 +52,15 @@ Ce qu'il garde sur ton disque pèse quelques dizaines de kilo-octets.
 
 Tu restes maître
 ----------------
+Un bouton rond près de la mini-carte montre que l'addon tourne. Au survol : ce qui est partagé, si le partage
+est actif, le dernier envoi. Clic droit : pause ou reprise (l'icône devient grise en pause).
+
 /lbf               ce que l'addon partage, et combien de membres sont dans ton carnet
 /lbf qui <recette> qui sait faire cette recette (exemple : /lbf qui révélation)
 /lbf envoyer       renvoyer tes métiers maintenant
 /lbf pause         ne plus RIEN partager ; les addons des membres connectés effacent ta fiche
 /lbf reprendre     relancer le partage
+/lbf bouton        cacher ou remettre le bouton de la mini-carte
 
 Pour disparaître aussi du site, mets l'addon en pause et préviens un officier : ta fiche en est retirée.
 Pour ne pas l'utiliser du tout, ne l'installe pas, ou décoche-le dans la liste des addons. Personne n'est obligé.
