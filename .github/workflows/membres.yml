@@ -1,0 +1,33 @@
+name: Membres de la guilde
+
+# La rubrique Membres du site, relue sur l'armurerie officielle toutes les 6 heures, même quand aucun PC n'est allumé.
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/scripts/membres.py"
+      - ".github/workflows/membres.yml"
+
+permissions:
+  contents: write
+
+concurrency: membres
+
+jobs:
+  membres:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Relire l'armurerie
+        run: python .github/scripts/membres.py
+      - name: Publier si la liste a changé
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/membres.json
+          if git diff --cached --quiet; then echo "Rien de changé."; else git commit -m "Membres : mise à jour depuis l'armurerie" && git push; fi
