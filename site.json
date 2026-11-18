@@ -1,7 +1,7 @@
 {
   "_meta": {
     "updated": "2026-11-18",
-    "note": "RÉDIGÉ : la vitrine du site de guilde LBF. Une rubrique de plus = une entrée dans rubriques (et sa page dans guilde.js) ; un addon de plus = une entrée dans addons. Les données de chaque rubrique vivent dans data/ (membres.json, guilde.json pour les métiers). service = le relais des codes collés (/lbf code), un Worker Cloudflare dont le code est dans service/worker.js."
+    "note": "RÉDIGÉ : la vitrine du site de guilde LBF. Une rubrique de plus = une entrée dans rubriques (et sa page dans guilde.js) ; un addon de plus = une entrée dans addons. Les données de chaque rubrique vivent dans data/ (membres.json, guilde.json pour les métiers). service = le relais des codes collés (/lbf code), un Worker Cloudflare dont le code est dans service/worker.js. rangs = le nom des rangs de la guilde (0 = chef de guilde), écrits à la main : l'armurerie de Blizzard ne les donne pas."
   },
   "service": "https://lbf-relais.lbf-guilde.workers.dev",
   "guilde": {
@@ -10,6 +10,7 @@
     "accroche": "Guilde Alliance · World of Warcraft: Forever · Europe",
     "presentation": ""
   },
+  "rangs": { "2": "Raider", "4": "Membre" },
   "rubriques": [
     { "id": "membres", "titre": "Membres", "icone": "achievement_guildperk_everybodysfriend", "desc": "Les membres de la guilde, leur classe, leur niveau et leur fiche officielle." },
     { "id": "metiers", "titre": "Métiers", "icone": "trade_blacksmithing", "desc": "Qui sait fabriquer quoi : les recettes de tous les membres mises en commun." },
