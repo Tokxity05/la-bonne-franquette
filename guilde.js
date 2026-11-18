@@ -625,6 +625,27 @@
       h("div", { class: "gd-docs" }, h("a", { class: "btn", href: lienAddon(ADDON_METIERS) }, "Télécharger l'addon"),
         CFG.service ? h("a", { class: "btn ghost", href: "#/metiers/envoyer" }, "Envoyer mes métiers") : null))));
   }
+  // Les recettes à recharge de la guilde (étoffe lunaire, transmutations…) : qui peut les lancer aujourd'hui, les prêtes d'abord
+  function blocRecharges() {
+    const L = [];
+    for (const [id, r] of Object.entries(D.recettes)) {
+      if (!r || !r.cd) continue;
+      const qui = (IX.quiSait.get(id) || []).map(({ m, x }) => ({ m, x, st: etatRecharge(m, id), sait: !!(m.recharges && typeof m.recharges === "object") }));
+      if (!qui.length) continue;
+      qui.sort((a, b) => a.st.reste - b.st.reste || parRang(a, b));
+      L.push({ id, r, qui, pretes: qui.filter((e) => e.st.pret).length });
+    }
+    if (!L.length) return null;
+    L.sort((a, b) => (b.pretes > 0) - (a.pretes > 0) || a.qui[0].st.reste - b.qui[0].st.reste || a.r.n.localeCompare(b.r.n, "fr"));
+    const n = L.filter((l) => l.pretes).length;
+    return cadre(n ? `Prêtes maintenant (${n})` : "Les recharges",
+      h("p", { class: "muted small gd-rch-aide" }, "Les recettes à recharge de la guilde, et qui peut les lancer aujourd'hui, d'après le dernier relevé de chacun."),
+      h("div", { class: "gd-rch" }, L.map(({ id, r, qui }) => h("div", { class: "gd-rch-ligne" },
+        lienRecette(id, [icone(r.i, "sm", r.k === "spell" ? null : r.q), h("span", { class: `gd-res-nom q-${couleurNom(r)}` }, r.n),
+          h("span", { class: "gd-res-sous" }, `${nomMetier(r.m)} · recharge de ${dureeRecharge(r.cd)}`)], "gd-rch-recette"),
+        h("div", { class: "gd-rch-qui" }, qui.map(({ m, x, st, sait }) => h("a", { class: `gd-recharge${st.pret ? " pret" : sait ? "" : " inconnue"}`, href: lienMembre(m, x.cle, id), title: st.titre },
+          h("span", { class: classeCss(m) }, m.nom), ` · ${st.pret ? "prête" : sait ? st.texte.replace(/^Prête dans /, "dans ") : "pas relevée"}`)))))));
+  }
   function pageMetiers(q, voir) {
     const titre = rubrique("metiers").titre;
     setTitre(titre);
@@ -642,6 +663,7 @@
       enteteRubrique("metiers", majuscule(resume), encartAddon(), encartEnvoi()),
       h("div", { class: "stack" },
         blocRecherche(q),
+        blocRecharges(),
         metiers.length ? cadre("Les métiers de la guilde", h("div", { class: "gd-tuiles" }, metiers.map((cle) => {
           const L = IX.parMetier.get(cle) || [];
           const meilleur = L.find((e) => e.x.rang != null);
