@@ -83,7 +83,7 @@ local function enPause() return db().prive == true end
 
 local function maFiche()
 	local nom = moi()
-	if not nom then return nil end
+	if not nom or not enGuilde() then return nil end
 	local d = db()
 	local m = d.membres[nom]
 	if type(m) ~= "table" then m = {}; d.membres[nom] = m end
@@ -643,7 +643,9 @@ f:SetScript("OnEvent", function(_, ev, a1, a2, a3, a4)
 				dire("/lbf pour le détail, /lbf pause pour arrêter.")
 			end)
 		end
-		C_Timer.After(5, function() pcall(lireRangs) end)
+		C_Timer.After(5, function()
+			if enGuilde() then pcall(lireRangs) else local nom = moi(); if nom then db().membres[nom] = nil end end
+		end)
 		C_Timer.After(10, function()
 			if C_GuildInfo and C_GuildInfo.GuildRoster then sur(C_GuildInfo.GuildRoster) elseif GuildRoster then sur(GuildRoster) end
 		end)
