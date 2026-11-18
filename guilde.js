@@ -23,7 +23,7 @@
 (() => {
   "use strict";
 
-  const FICHIERS = { site: "site.json", membres: "data/membres.json", rangs: "data/rangs.json", metiers: "data/guilde.json", catalogue: "data/catalogue.json" };
+  const FICHIERS = { site: "site.json", membres: "data/membres.json", metiers: "data/guilde.json", catalogue: "data/catalogue.json" };
   const ZIP_DEFAUT = "MetierLBF.zip";
   const ADDON_METIERS = "metier-lbf";           // l'addon des métiers : ses infos viennent aussi de data/guilde.json > addon
   const NOM_ADDON_METIERS = "Métiers LBF";   // repli : le nom affiché vient de site.json, puis de data/guilde.json > addon.nom
@@ -1466,11 +1466,10 @@
     const pSite = lire(FICHIERS.site);
     // Le relais des codes, dès que site.json donne son adresse ; 4 s au plus, le site s'ouvre sans lui
     const pRelais = pSite.then((x) => { lireSite(x); return CFG.service ? Promise.race([lire(`${CFG.service}/fiches`), new Promise((ok) => setTimeout(() => ok(null), 4000))]) : null; });
-    const [s, mb, mt, rg, rl] = await Promise.allSettled([pSite, lire(FICHIERS.membres), lire(FICHIERS.metiers), lire(FICHIERS.rangs), pRelais]);
+    const [s, mb, mt, rl] = await Promise.allSettled([pSite, lire(FICHIERS.membres), lire(FICHIERS.metiers), pRelais]);
     lireSite(s.status === "fulfilled" ? s.value : null);
     try { if (mb.status === "fulfilled") lireMembres(mb.value); else ERREUR_R = panne(); } catch (e) { R = null; ERREUR_R = "lecture"; }
-    // Les noms des rangs : data/rangs.json (lus en jeu par l'addon d'un officier), à part de la liste que GitHub relit sur l'armurerie
-    if (R && rg.status === "fulfilled" && rg.value && rg.value.rangs && typeof rg.value.rangs === "object" && !Array.isArray(rg.value.rangs)) R.rangs = { ...rg.value.rangs, ...R.rangs };
+    // Les noms des rangs : site.json > rangs (l'armurerie de Blizzard ne les donne pas)
     if (R) R.rangs = { ...R.rangs, ...CFG.rangs };
     if (mt.status === "fulfilled") {
       const d = mt.value;
