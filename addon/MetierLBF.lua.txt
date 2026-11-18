@@ -52,7 +52,7 @@ local function split(s, sep)
 end
 local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
-local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.2.0"
+local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.3.0"
 
 local function plusRecente(a, b)
 	local x, y = split(a or "0", "."), split(b or "0", ".")
@@ -63,12 +63,7 @@ local function plusRecente(a, b)
 	return false
 end
 
-local prevenu = false
-local function verifierVersion(v)
-	if prevenu or not v or not plusRecente(v, VERSION) then return end
-	prevenu = true
-	dire(string.format("la version %s est sortie (tu as la %s) : %s#/addon", v, VERSION, SITE))
-end
+local majBouton
 
 ---------------------------------------------------------------- données
 
@@ -80,6 +75,26 @@ local function db()
 	return d
 end
 local function enPause() return db().prive == true end
+
+-- Une version plus récente vue chez un membre : gardée jusqu'à la mise à jour (bouton, bulle, message à chaque connexion)
+local function nouvelleVersion()
+	local v = db().derniere
+	if v and plusRecente(v, VERSION) then return v end
+end
+local prevenu = false
+local function annoncerMaj()
+	local v = nouvelleVersion()
+	if not v or prevenu then return end
+	prevenu = true
+	dire(string.format("|cffff8000nouvelle version %s disponible|r (tu as la %s). Télécharge-la sur %s#/addon puis relance le jeu.", v, VERSION, SITE))
+end
+local function verifierVersion(v)
+	if not v or not plusRecente(v, VERSION) then return end
+	local d = db()
+	if not d.derniere or plusRecente(v, d.derniere) then d.derniere = v end
+	annoncerMaj()
+	if majBouton then majBouton() end
+end
 
 local function maFiche()
 	local nom = moi()
@@ -413,8 +428,6 @@ local function chercher(mot)
 	if #ordre > 8 then dire(string.format("et %d autres, précise le nom.", #ordre - 8)) end
 end
 
-local majBouton
-
 local function compte()
 	local d, avec = db(), 0
 	for _, m in pairs(d.membres) do
@@ -480,7 +493,12 @@ local bouton
 
 local function bulle(tt)
 	local n, avec = compte()
-	tt:AddLine("Métier LBF |cff9d9d9dv" .. VERSION .. "|r")
+	tt:AddDoubleLine("Métier LBF", "Version " .. VERSION, 1, 0.82, 0, 0.62, 0.62, 0.62)
+	local nv = nouvelleVersion()
+	if nv then
+		tt:AddLine("Nouvelle version disponible : " .. nv, 1, 0.5, 0)
+		tt:AddLine("À télécharger sur le site de la guilde, page « L'addon ».", 1, 1, 1, true)
+	end
 	if enPause() then tt:AddLine("Partage en pause", 1, 0.3, 0.3) else tt:AddLine("Partage actif", 0.2, 1, 0.2) end
 	tt:AddLine(" ")
 	tt:AddLine("Partagé avec la guilde :", 1, 0.82, 0)
@@ -508,8 +526,17 @@ local function clic(souris)
 end
 
 majBouton = function()
-	local ic = bouton and bouton.icon
+	if not bouton then return end
+	local ic = bouton.icon
 	if ic and ic.SetDesaturated then ic:SetDesaturated(enPause()) end
+	if not bouton.lbfMaj then
+		local b = bouton:CreateTexture(nil, "OVERLAY", nil, 7)
+		b:SetTexture("Interface\\GossipFrame\\AvailableQuestIcon")
+		b:SetSize(14, 14)
+		b:SetPoint("TOPRIGHT", bouton, "TOPRIGHT", 1, 1)
+		bouton.lbfMaj = b
+	end
+	bouton.lbfMaj:SetShown(nouvelleVersion() ~= nil)
 end
 
 local function reglages()
@@ -646,6 +673,8 @@ f:SetScript("OnEvent", function(_, ev, a1, a2, a3, a4)
 		C_Timer.After(5, function()
 			if enGuilde() then pcall(lireRangs) else local nom = moi(); if nom then db().membres[nom] = nil end end
 		end)
+		if not nouvelleVersion() then db().derniere = nil end
+		C_Timer.After(12, annoncerMaj)
 		C_Timer.After(10, function()
 			if C_GuildInfo and C_GuildInfo.GuildRoster then sur(C_GuildInfo.GuildRoster) elseif GuildRoster then sur(GuildRoster) end
 		end)
