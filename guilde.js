@@ -666,12 +666,10 @@
         blocRecharges(),
         metiers.length ? cadre("Les métiers de la guilde", h("div", { class: "gd-tuiles" }, metiers.map((cle) => {
           const L = IX.parMetier.get(cle) || [];
-          const meilleur = L.find((e) => e.x.rang != null);
           const nR = idsDuMetier(cle).length;
-          return h("a", { class: "gd-tuile", href: `#/metier/${encodeURIComponent(cle)}`, title: meilleur ? `Meilleur rang : ${meilleur.m.nom}` : null },
+          return h("a", { class: "gd-tuile", href: `#/metier/${encodeURIComponent(cle)}`, },
             icone(iconeMetier(cle), "lg"), h("span", { class: "gd-tuile-nom" }, nomMetier(cle)),
-            h("span", { class: "gd-tuile-info" }, [pl(L.length, "membre"), nR ? pl(nR, "recette") : null].filter(Boolean).join(" · ")),
-            meilleur ? h("span", { class: "gd-tuile-info" }, `meilleur rang ${meilleur.x.rang}${meilleur.x.max ? `/${meilleur.x.max}` : ""}`) : null);
+            h("span", { class: "gd-tuile-info" }, [pl(L.length, "membre"), nR ? pl(nR, "recette") : null].filter(Boolean).join(" · ")));
         }))) : null,
         nouveautes,
         cadre("Derniers membres vus", liste)));
