@@ -650,3 +650,18 @@ a.lv-titre-nom:hover { color: #fff2a8; }
 .gd-marque { flex-direction: row; align-items: center; gap: 9px; }
 .gd-marque-logo { width: 38px; height: auto; flex: none; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .7)); }
 .gd-marque-txt { display: flex; flex-direction: column; line-height: 1.1; }
+
+/* Un peu de finition */
+::selection { background: rgba(255, 209, 0, .28); color: #fff; }
+html { scrollbar-color: #6b5420 #0d0b09; }
+#vue > * { animation: gd-entree .35s ease-out both; }
+@keyframes gd-entree { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.frame { transition: box-shadow .25s; }
+.frame:hover { box-shadow: 0 0 0 1px #000, inset 0 0 0 1px rgba(255, 209, 0, .18), 0 10px 26px rgba(0, 0, 0, .55); }
+.gd-hero h1 { background: linear-gradient(180deg, #fff3c4 0%, #ffd100 45%, #b8862b 100%); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .8)); }
+.gd-logo { transition: transform .4s ease, filter .4s ease; }
+.gd-logo:hover { transform: scale(1.03); filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .75)) drop-shadow(0 0 16px rgba(255, 200, 80, .25)); }
+.gd-tuile .icon { transition: box-shadow .2s, transform .2s; }
+.gd-tuile:hover .icon { transform: scale(1.06); box-shadow: 0 0 0 2px #000, 0 0 0 4px #ffd100, 0 0 0 5px #000, 0 0 14px rgba(255, 209, 0, .45); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid #ffd100; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { #vue > *, .frame, .gd-logo, .gd-tuile .icon { animation: none; transition: none; } }
