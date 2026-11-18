@@ -1,47 +1,32 @@
---[[ Métier LBF (983, 18/11/2026) : le carnet des métiers de La Bonne Franquette (LBF).
-
-Chaque membre qui l'installe relève SES métiers (niveau, recettes connues, recharges) à l'ouverture de sa fenêtre de métier, et les partage
-sur le canal caché de la guilde (messages d'addon, « GUILD »). Chaque exemplaire garde ce qu'il reçoit des autres dans MetierLBFDB
-(SavedVariables du compte) ; le site Métier LBF est nourri par l'exemplaire d'un officier (le Grimoire d'Azeroth relit ce fichier).
-
-Ce qu'il partage, et rien d'autre (Melvin, 18/11) : le nom de ton perso, sa classe, tes métiers et leur niveau, tes recettes connues et tes
-recharges. Ni niveau de perso, ni sacs, ni or, ni position. Léger : aucune minuterie qui tourne en continu, une lecture par ouverture de fenêtre,
-une fiche envoyée à la connexion et quand une recette s'ajoute.
-Comment : lecture seule de ta fenêtre de métier (jamais celle d'un autre, d'un lien ou d'un PNJ), aucun appel qui touche
-aux filtres ou à la fenêtre, jamais en combat ; ni sacs, ni or, ni position. En jeu : /lbf, /lbf envoyer, /lbf qui <recette>.
-
-Tu restes maître : /lbf pause arrête tout partage et demande aux autres addons d'effacer ta fiche (« X ») ; /lbf reprendre le relance.
-
-Messages (préfixe MetierLBF) : « Q:<version> » = « envoyez vos métiers » (envoyé 15 s après la connexion) ; « X » = « oubliez ma fiche » ; « D<suite>:<i>:<n>:<morceau> » = ta fiche
-découpée en morceaux de 220 octets, une par seconde au plus. Fiche = 1;<nom>;<classe>;<niveau>;<maj>;<métiers>;<recharges>, nombres en base 36 :
-métiers = ligne:rang:max:id.id.id/…, recharges = id:heure,… ; puis ;<version de l'addon>. Une version plus récente vue chez un autre membre :
-un message en jeu, une fois, qui renvoie au site (SITE) pour la mise à jour. ]]
+-- Métier LBF - La Bonne Franquette
+-- Partage avec la guilde : nom, classe, métiers, recettes connues, recharges. Rien d'autre.
 
 local PREFIXE, PROTOCOLE = "MetierLBF", "1"
-local MORCEAU, PAUSE_ENVOI, PLAFOND_RECETTES, PLAFOND_MEMBRES = 220, 1.0, 1500, 1000
-local VERT, OR = "|cff1eff00", "|cffd4af37"
+local TAILLE, PAUSE = 220, 1.0
+local MAX_RECETTES, MAX_MEMBRES = 1500, 1000
+local OR, VERT = "|cffd4af37", "|cff1eff00"
+local SITE = "https://tokxity05.github.io/la-bonne-franquette/"
 
--- Nom d'un métier (français ou anglais, en minuscules) -> sa ligne de compétence (celle de la fenêtre de métier)
 local LIGNES = { couture = 197, tailoring = 197, enchantement = 333, enchanting = 333, alchimie = 171, alchemy = 171, forge = 164, blacksmithing = 164,
-	["ingénierie"] = 202, ingenierie = 202, engineering = 202, ["travail du cuir"] = 165, leatherworking = 165, herboristerie = 182, herbalism = 182,
-	minage = 186, mining = 186, ["dépeçage"] = 393, depecage = 393, skinning = 393, cuisine = 185, cooking = 185, secourisme = 129, ["first aid"] = 129,
-	["pêche"] = 356, peche = 356, fishing = 356 }
+	["ingénierie"] = 202, engineering = 202, ["travail du cuir"] = 165, leatherworking = 165, herboristerie = 182, herbalism = 182,
+	minage = 186, mining = 186, ["dépeçage"] = 393, skinning = 393, cuisine = 185, cooking = 185, secourisme = 129, ["first aid"] = 129,
+	["pêche"] = 356, fishing = 356 }
 
------------------------------------------------------------------------------------------------- outils
 local function sur(f, ...)
 	if type(f) ~= "function" then return nil end
-	local res = { pcall(f, ...) }
-	if not res[1] then return nil end
-	return unpack(res, 2, table.maxn(res))
+	local r = { pcall(f, ...) }
+	if not r[1] then return nil end
+	return unpack(r, 2, table.maxn(r))
 end
--- Le moteur 12.x peut renvoyer des valeurs « secrètes », illisibles par les addons
 local function lisible(v) return v ~= nil and not sur(issecretvalue, v) end
 local function texte(v) if lisible(v) and type(v) == "string" and v ~= "" then return v end end
 local function nombre(v) if lisible(v) and type(v) == "number" then return v end end
 local function oui(v) return lisible(v) and (v == true or v == 1) end
 local function court(nom) return nom and (nom:match("^([^%-]+)") or nom) end
-local function moi() return court(sur(UnitName, "player")) end
-local function maintenant() return sur(time) or 0 end
+local function moi() return court(texte((sur(UnitName, "player")))) end
+local function now() return sur(time) or 0 end
+local function enGuilde() return IsInGuild and oui(sur(IsInGuild)) end
+local function dire(msg) print(OR .. "Métier LBF|r : " .. msg) end
 
 local B36 = "0123456789abcdefghijklmnopqrstuvwxyz"
 local function b36(n)
@@ -56,37 +41,37 @@ local function b36(n)
 	return s
 end
 local function d36(s) return tonumber(s or "", 36) end
-local function decouper(s, sep)
-	local t, debut = {}, 1
+local function split(s, sep)
+	local t, i = {}, 1
 	while true do
-		local i = string.find(s, sep, debut, true)
-		if not i then t[#t + 1] = s:sub(debut); return t end
-		t[#t + 1] = s:sub(debut, i - 1)
-		debut = i + #sep
+		local j = string.find(s, sep, i, true)
+		if not j then t[#t + 1] = s:sub(i); return t end
+		t[#t + 1] = s:sub(i, j - 1)
+		i = j + #sep
 	end
 end
-local function dire(msg) print(OR .. "Métier LBF|r : " .. msg) end
+local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
--- La version de l'addon (celle du .toc) et l'adresse du site où télécharger la nouvelle
-local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.0.0"
-local SITE = "https://tokxity05.github.io/la-bonne-franquette/" -- le site de la guilde (GitHub Pages)
-local function plusRecente(a, b) -- a > b ?
-	local x, y = decouper(a or "0", "."), decouper(b or "0", ".")
+local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.1.0"
+
+local function plusRecente(a, b)
+	local x, y = split(a or "0", "."), split(b or "0", ".")
 	for k = 1, math.max(#x, #y) do
 		local u, v = tonumber(x[k]) or 0, tonumber(y[k]) or 0
 		if u ~= v then return u > v end
 	end
 	return false
 end
+
 local prevenu = false
 local function verifierVersion(v)
 	if prevenu or not v or not plusRecente(v, VERSION) then return end
 	prevenu = true
-	dire(string.format("une nouvelle version (%s) est disponible, tu as la %s : télécharge-la sur %s, remplace le dossier MetierLBF, puis relance le jeu.",
-		v, VERSION, SITE ~= "" and (SITE .. "#/addon") or "le site de la guilde"))
+	dire(string.format("la version %s est sortie (tu as la %s) : %s#/addon", v, VERSION, SITE))
 end
 
------------------------------------------------------------------------------------------------- le carnet
+---------------------------------------------------------------- données
+
 local function db()
 	if type(MetierLBFDB) ~= "table" then MetierLBFDB = {} end
 	local d = MetierLBFDB
@@ -94,11 +79,8 @@ local function db()
 	if type(d.membres) ~= "table" then d.membres = {} end
 	return d
 end
-local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
--- En pause (/lbf pause) : plus rien ne part, ni ta fiche ni tes réponses aux demandes
 local function enPause() return db().prive == true end
 
--- Ta fiche : classe et niveau à jour ; métiers { [ligne] = { nom, rang, max, ids } }, recharges { [recette] = heure où elle est prête }
 local function maFiche()
 	local nom = moi()
 	if not nom then return nil end
@@ -109,12 +91,11 @@ local function maFiche()
 	if type(m.recharges) ~= "table" then m.recharges = {} end
 	local _, classe = sur(UnitClass, "player")
 	m.classe = texte(classe) or m.classe
-	m.niveau = nil -- pas partagé (Melvin, 18/11 : seulement le nom, la classe et les métiers)
-	m.moi = true
 	m.version = VERSION
 	d.moi = nom
 	return m, nom
 end
+
 local function metier(m, ligne)
 	local x = m.metiers[ligne]
 	if type(x) ~= "table" then x = {}; m.metiers[ligne] = x end
@@ -122,16 +103,15 @@ local function metier(m, ligne)
 	return x
 end
 
--- Les niveaux de tes métiers, sans ouvrir de fenêtre : GetProfessions, sinon la liste des compétences
 local function lireRangs()
 	local m = maFiche()
 	if not m then return end
 	local lus = 0
 	if GetProfessions and GetProfessionInfo then
-		local indices = { sur(GetProfessions) }
+		local idx = { sur(GetProfessions) }
 		for k = 1, 6 do
-			if indices[k] then
-				local nom, _, rang, max, _, _, ligne = sur(GetProfessionInfo, indices[k])
+			if idx[k] then
+				local nom, _, rang, max, _, _, ligne = sur(GetProfessionInfo, idx[k])
 				ligne = nombre(ligne) or LIGNES[string.lower(texte(nom) or "")]
 				if ligne and nombre(rang) then
 					local x = metier(m, ligne)
@@ -141,31 +121,30 @@ local function lireRangs()
 			end
 		end
 	end
-	if lus == 0 then
-		local nb = (C_SkillInfo and sur(C_SkillInfo.GetNumSkillLines)) or sur(GetNumSkillLines) or 0
-		for i = 1, nb do
-			local nom, entete, rang, max
-			if C_SkillInfo and C_SkillInfo.GetSkillLineInfo then
-				local s = sur(C_SkillInfo.GetSkillLineInfo, i)
-				if type(s) == "table" then nom, entete, rang, max = s.name, s.isHeader, s.rank, s.maxRank end
-			else
-				local a, b, _, r, _, _, mx = sur(GetSkillLineInfo, i)
-				nom, entete, rang, max = a, b, r, mx
-			end
-			local ligne = LIGNES[string.lower(texte(nom) or "")]
-			if ligne and not oui(entete) and nombre(rang) then
-				local x = metier(m, ligne)
-				x.nom, x.rang, x.max = texte(nom), nombre(rang), nombre(max) or x.max
-			end
+	if lus > 0 then return end
+	-- ancienne API
+	local nb = (C_SkillInfo and sur(C_SkillInfo.GetNumSkillLines)) or sur(GetNumSkillLines) or 0
+	for i = 1, nb do
+		local nom, entete, rang, max
+		if C_SkillInfo and C_SkillInfo.GetSkillLineInfo then
+			local s = sur(C_SkillInfo.GetSkillLineInfo, i)
+			if type(s) == "table" then nom, entete, rang, max = s.name, s.isHeader, s.rank, s.maxRank end
+		else
+			local a, b, _, r, _, _, mx = sur(GetSkillLineInfo, i)
+			nom, entete, rang, max = a, b, r, mx
+		end
+		local ligne = LIGNES[string.lower(texte(nom) or "")]
+		if ligne and not oui(entete) and nombre(rang) then
+			local x = metier(m, ligne)
+			x.nom, x.rang, x.max = texte(nom), nombre(rang), nombre(max) or x.max
 		end
 	end
 end
 
--- Les recharges de tes recettes (étoffe lunaire, transmutations…) : l'heure où chacune sera prête, seulement celles en cours
 local function lireRecharges()
 	local m = maFiche()
 	if not m then return end
-	local present, jeu, rech = maintenant(), sur(GetTime) or 0, {}
+	local t, jeu, rech = now(), sur(GetTime) or 0, {}
 	for _, x in pairs(m.metiers) do
 		for _, id in ipairs(x.ids or {}) do
 			local debut, duree
@@ -178,22 +157,46 @@ local function lireRecharges()
 			end
 			if debut and duree and debut > 0 and duree > 60 then
 				local reste = debut + duree - jeu
-				if reste > 0 then rech[id] = math.floor(present + reste) end
+				if reste > 0 then rech[id] = math.floor(t + reste) end
 			end
 		end
 	end
 	m.recharges = rech
 end
 
------------------------------------------------------------------------------------------------- ta fenêtre de métier (lecture seule)
-local metierOuvert, attente, lus, aRefaire = false, false, {}, false
-local planifierEnvoi -- plus bas
+-- Liste des membres de la guilde : lue sur place, jamais envoyée. Sert à oublier ceux qui sont partis.
+local dernierRoster = 0
+local function lireRoster()
+	if not enGuilde() or now() - dernierRoster < 60 then return end
+	local n = nombre(sur(GetNumGuildMembers)) or 0
+	if n <= 0 then return end
+	local noms, liste = {}, {}
+	for i = 1, n do
+		local nom = court(texte((sur(GetGuildRosterInfo, i))))
+		if nom then noms[nom] = true; liste[#liste + 1] = nom end
+	end
+	-- liste incomplète (membres hors ligne absents) : on ne retire personne
+	local nous = moi()
+	if #liste < n or not nous or not noms[nous] then return end
+	dernierRoster = now()
+	local d = db()
+	d.guilde = texte((sur(GetGuildInfo, "player"))) or d.guilde
+	d.roster, d.rosterMaj = liste, now()
+	for nom in pairs(d.membres) do
+		if not noms[nom] then d.membres[nom] = nil end
+	end
+end
+
+---------------------------------------------------------------- fenêtre de métier
+
+local ouvert, attente, lus, aRefaire = false, false, {}, false
+local planifierEnvoi
 
 local function lireFenetre()
 	local T = C_TradeSkillUI
 	if type(T) ~= "table" then return end
 	if oui(sur(T.IsDataSourceChanging)) or sur(T.IsTradeSkillReady) == false then return end
-	-- Le métier d'un autre (lien, guilde, PNJ) : jamais
+	-- jamais le métier de quelqu'un d'autre
 	if oui(sur(T.IsTradeSkillLinked)) or oui(sur(T.IsTradeSkillGuild)) or oui(sur(T.IsTradeSkillGuildMember)) or oui(sur(T.IsNPCCrafting)) then return end
 	local info = sur(T.GetBaseProfessionInfo)
 	if type(info) ~= "table" then return end
@@ -210,21 +213,20 @@ local function lireFenetre()
 	x.nom = texte(info.parentProfessionName) or texte(info.professionName) or x.nom
 	x.rang = nombre(info.skillLevel) or x.rang
 	x.max = nombre(info.maxSkillLevel) or x.max
-	-- Une recette apprise ne s'oublie pas : on ajoute, on ne retire jamais
 	local vues, neuves = {}, 0
 	for _, id in ipairs(x.ids) do vues[id] = true end
-	for i = 1, math.min(#liste, PLAFOND_RECETTES) do
+	for i = 1, math.min(#liste, MAX_RECETTES) do
 		local id = nombre(liste[i])
 		local r = id and sur(T.GetRecipeInfo, id)
-		if type(r) == "table" and oui(r.learned) and not vues[id] and #x.ids < PLAFOND_RECETTES then
+		if type(r) == "table" and oui(r.learned) and not vues[id] and #x.ids < MAX_RECETTES then
 			vues[id] = true
 			x.ids[#x.ids + 1] = id
 			neuves = neuves + 1
 		end
 	end
-	m.maj = maintenant()
+	m.maj = now()
 	lireRecharges()
-	planifierEnvoi(8, neuves > 0) -- les autres le savent dans la foulée
+	planifierEnvoi(8, neuves > 0)
 end
 
 local function planifierFenetre()
@@ -233,15 +235,16 @@ local function planifierFenetre()
 	attente = true
 	C_Timer.After(1, function()
 		attente = false
-		if metierOuvert and not oui(sur(InCombatLockdown)) then pcall(lireFenetre) end
+		if ouvert and not oui(sur(InCombatLockdown)) then pcall(lireFenetre) end
 	end)
 end
 
------------------------------------------------------------------------------------------------- partager avec la guilde
-local file, dernierEnvoi, envoiPrevu, suite = {}, 0, nil, 0
+---------------------------------------------------------------- envoi
+
+local file, dernierEnvoi, envoiPrevu, suite, enCours = {}, 0, nil, 0, false
 
 local function envoyerBrut(msg)
-	if not (IsInGuild and oui(sur(IsInGuild))) then return end
+	if not enGuilde() then return end
 	if C_ChatInfo and C_ChatInfo.SendAddonMessage then
 		sur(C_ChatInfo.SendAddonMessage, PREFIXE, msg, "GUILD")
 	elseif SendAddonMessage then
@@ -249,22 +252,17 @@ local function envoyerBrut(msg)
 	end
 end
 
--- Une seconde entre deux messages : le jeu limite les messages d'addon ; la minuterie ne vit que le temps de vider la file
-local envoiEnCours = false
 local function viderFile()
 	local msg = table.remove(file, 1)
 	if msg then
 		envoyerBrut(msg)
-		C_Timer.After(PAUSE_ENVOI, viderFile)
+		C_Timer.After(PAUSE, viderFile)
 	else
-		envoiEnCours = false
+		enCours = false
 	end
 end
 local function lancerFile()
-	if not envoiEnCours and #file > 0 then
-		envoiEnCours = true
-		viderFile()
-	end
+	if not enCours and #file > 0 then enCours = true; viderFile() end
 end
 
 local function serialiser(nom, m)
@@ -274,19 +272,21 @@ local function serialiser(nom, m)
 		for _, id in ipairs(x.ids or {}) do ids[#ids + 1] = b36(id) end
 		parts[#parts + 1] = b36(ligne) .. ":" .. (x.rang or 0) .. ":" .. (x.max or 0) .. ":" .. table.concat(ids, ".")
 	end
-	local rech, present = {}, maintenant()
-	for id, t in pairs(m.recharges or {}) do if t > present then rech[#rech + 1] = b36(id) .. ":" .. b36(t) end end
-	return table.concat({ PROTOCOLE, nom, m.classe or "", "", b36(m.maj or present), table.concat(parts, "/"), table.concat(rech, ","), VERSION }, ";")
+	local rech, t = {}, now()
+	for id, fin in pairs(m.recharges or {}) do
+		if fin > t then rech[#rech + 1] = b36(id) .. ":" .. b36(fin) end
+	end
+	return table.concat({ PROTOCOLE, nom, m.classe or "", "", b36(m.maj or t), table.concat(parts, "/"), table.concat(rech, ","), VERSION }, ";")
 end
 
--- Découpe en morceaux de MORCEAU octets, jamais au milieu d'une lettre accentuée (UTF-8)
+-- découpe sans couper une lettre accentuée en deux
 local function morceaux(s)
 	local t, i = {}, 1
 	while i <= #s do
-		local j = math.min(i + MORCEAU - 1, #s)
+		local j = math.min(i + TAILLE - 1, #s)
 		while j < #s and j > i do
 			local b = s:byte(j + 1)
-			if b < 128 or b >= 192 then break end -- le suivant commence une lettre : on peut couper ici
+			if b < 128 or b >= 192 then break end
 			j = j - 1
 		end
 		t[#t + 1] = s:sub(i, j)
@@ -298,44 +298,46 @@ end
 local function envoyerFiche()
 	envoiPrevu = nil
 	local m, nom = maFiche()
-	if not m or enPause() or not (IsInGuild and oui(sur(IsInGuild))) then return end
+	if not m or enPause() or not enGuilde() then return end
 	lireRangs()
 	lireRecharges()
 	if compter(m.metiers) == 0 then return end
 	local p = morceaux(serialiser(nom, m))
 	suite = (suite % 1295) + 1
 	for i, x in ipairs(p) do file[#file + 1] = "D" .. b36(suite) .. ":" .. i .. ":" .. #p .. ":" .. x end
-	dernierEnvoi = maintenant()
+	dernierEnvoi = now()
 	lancerFile()
 end
 
--- Envoyer ta fiche dans « delai » secondes ; sans « force », pas deux fois en 90 s (une demande de chacun ne fait pas une avalanche)
 planifierEnvoi = function(delai, force)
-	if not force and maintenant() - dernierEnvoi < 90 then return end
-	local quand = maintenant() + delai
+	if not force and now() - dernierEnvoi < 90 then return end
+	local quand = now() + delai
 	if envoiPrevu and envoiPrevu <= quand then return end
 	envoiPrevu = quand
-	C_Timer.After(delai, function() if envoiPrevu and maintenant() >= envoiPrevu - 1 then envoyerFiche() end end)
+	C_Timer.After(delai, function()
+		if envoiPrevu and now() >= envoiPrevu - 1 then envoyerFiche() end
+	end)
 end
 
------------------------------------------------------------------------------------------------- recevoir
+---------------------------------------------------------------- réception
+
 local recus = {}
 
 local function lireFiche(payload, qui)
-	local c = decouper(payload, ";")
-	if c[1] ~= PROTOCOLE or c[2] ~= qui then return end -- une fiche ne parle que de celui qui l'envoie
+	local c = split(payload, ";")
+	if c[1] ~= PROTOCOLE or court(c[2]) ~= qui then return end
 	local d = db()
-	if not d.membres[qui] and compter(d.membres) >= PLAFOND_MEMBRES then return end
-	local f = { classe = texte(c[3]), maj = d36(c[5]), vu = maintenant(), metiers = {}, recharges = {}, version = texte(c[8]) }
+	if not d.membres[qui] and compter(d.membres) >= MAX_MEMBRES then return end
+	local f = { classe = texte(c[3]), maj = d36(c[5]), vu = now(), metiers = {}, recharges = {}, version = texte(c[8]) }
 	verifierVersion(f.version)
-	for _, bloc in ipairs(decouper(c[6] or "", "/")) do
+	for _, bloc in ipairs(split(c[6] or "", "/")) do
 		local l, rang, max, ids = bloc:match("^(%w+):(%d+):(%d+):(.*)$")
 		local ligne = d36(l)
 		if ligne then
 			local x = { rang = tonumber(rang), max = tonumber(max), ids = {} }
 			for v in string.gmatch(ids or "", "[^%.]+") do
 				local id = d36(v)
-				if id and #x.ids < PLAFOND_RECETTES then x.ids[#x.ids + 1] = id end
+				if id and #x.ids < MAX_RECETTES then x.ids[#x.ids + 1] = id end
 			end
 			f.metiers[ligne] = x
 		end
@@ -345,15 +347,18 @@ local function lireFiche(payload, qui)
 		if d36(id) and d36(t) then f.recharges[d36(id)] = d36(t) end
 	end
 	local ancien = d.membres[qui]
-	if type(ancien) ~= "table" or (f.maj or 0) >= (ancien.maj or 0) then d.membres[qui] = f
-	else ancien.vu = f.vu end
+	if type(ancien) ~= "table" or (f.maj or 0) >= (ancien.maj or 0) then
+		d.membres[qui] = f
+	else
+		ancien.vu = f.vu
+	end
 end
 
 local function recevoir(prefixe, msg, canal, expediteur)
 	if prefixe ~= PREFIXE or canal ~= "GUILD" or type(msg) ~= "string" then return end
 	local qui = court(expediteur)
 	if not qui or qui == moi() then return end
-	if msg == "X" then db().membres[qui] = nil; return end -- ce membre a mis l'addon en pause : sa fiche s'efface
+	if msg == "X" then db().membres[qui] = nil; return end
 	if msg == "Q" or msg:sub(1, 2) == "Q:" then
 		verifierVersion(texte(msg:sub(3)))
 		if not enPause() then planifierEnvoi(math.random(3, 25)) end
@@ -364,36 +369,37 @@ local function recevoir(prefixe, msg, canal, expediteur)
 	if not s or not i or not n or n < 1 or n > 60 or i > n then return end
 	local cle = qui .. "#" .. s
 	local r = recus[cle]
-	if not r then r = { n = n, parts = {}, recu = 0, quand = maintenant() }; recus[cle] = r end
+	if not r then r = { n = n, parts = {}, recu = 0, quand = now() }; recus[cle] = r end
 	if not r.parts[i] then r.parts[i] = x; r.recu = r.recu + 1 end
 	if r.recu >= r.n then
 		recus[cle] = nil
 		pcall(lireFiche, table.concat(r.parts), qui)
 	end
-	-- Les morceaux d'une fiche jamais complète s'effacent au bout de 2 min
-	for k, v in pairs(recus) do if maintenant() - v.quand > 120 then recus[k] = nil end end
+	for k, v in pairs(recus) do
+		if now() - v.quand > 120 then recus[k] = nil end
+	end
 end
 
------------------------------------------------------------------------------------------------- /lbf
-local function nomDuSort(id)
+---------------------------------------------------------------- /lbf
+
+local function nomSort(id)
 	return (C_Spell and sur(C_Spell.GetSpellName, id)) or texte((sur(GetSpellInfo, id)))
 end
+local ACCENTS = { ["é"] = "e", ["è"] = "e", ["ê"] = "e", ["ë"] = "e", ["à"] = "a", ["â"] = "a", ["î"] = "i", ["ï"] = "i", ["ô"] = "o", ["û"] = "u", ["ù"] = "u", ["ç"] = "c", ["É"] = "e", ["’"] = "'" }
 local function plat(s)
 	s = string.lower(s or "")
-	for a, b in pairs({ ["é"] = "e", ["è"] = "e", ["ê"] = "e", ["ë"] = "e", ["à"] = "a", ["â"] = "a", ["î"] = "i", ["ï"] = "i", ["ô"] = "o", ["û"] = "u", ["ù"] = "u", ["ç"] = "c", ["É"] = "e", ["’"] = "'" }) do
-		s = s:gsub(a, b)
-	end
+	for a, b in pairs(ACCENTS) do s = s:gsub(a, b) end
 	return s
 end
 
 local function chercher(mot)
 	local q = plat(mot)
-	if q == "" then dire("/lbf qui <recette> : qui sait la faire, par exemple /lbf qui révélation"); return end
+	if q == "" then dire("/lbf qui <recette>, par exemple /lbf qui révélation"); return end
 	local trouves, ordre = {}, {}
 	for nom, m in pairs(db().membres) do
 		for _, x in pairs(type(m) == "table" and m.metiers or {}) do
 			for _, id in ipairs(x.ids or {}) do
-				local n = nomDuSort(id)
+				local n = nomSort(id)
 				if n and string.find(plat(n), q, 1, true) then
 					if not trouves[n] then trouves[n] = {}; ordre[#ordre + 1] = n end
 					trouves[n][#trouves[n] + 1] = nom .. (x.rang and (" (" .. x.rang .. ")") or "")
@@ -401,10 +407,10 @@ local function chercher(mot)
 			end
 		end
 	end
-	if #ordre == 0 then dire("personne dans ton carnet ne connaît « " .. mot .. " »."); return end
+	if #ordre == 0 then dire("personne ne connaît « " .. mot .. " »."); return end
 	table.sort(ordre)
 	for k = 1, math.min(#ordre, 8) do dire(VERT .. ordre[k] .. "|r : " .. table.concat(trouves[ordre[k]], ", ")) end
-	if #ordre > 8 then dire(string.format("… et %d autres recettes : précise le nom.", #ordre - 8)) end
+	if #ordre > 8 then dire(string.format("et %d autres, précise le nom.", #ordre - 8)) end
 end
 
 SLASH_METIERLBF1 = "/lbf"
@@ -416,86 +422,96 @@ SlashCmdList.METIERLBF = function(arg)
 		db().prive = true
 		for k in pairs(file) do file[k] = nil end
 		envoyerBrut("X")
-		dire("pause : plus rien ne part de ton côté, et les addons des membres connectés effacent ta fiche. Pour disparaître aussi du site, préviens un officier. /lbf reprendre pour relancer.")
+		dire("pause. Plus rien ne part, et ta fiche est effacée chez les membres connectés. /lbf reprendre pour relancer.")
 	elseif cmd == "reprendre" then
 		db().prive = false
 		planifierEnvoi(2, true)
-		dire("le partage reprend : tes métiers partent vers la guilde.")
+		dire("le partage reprend.")
 	elseif cmd == "envoyer" then
-		if enPause() then dire("tu es en pause : /lbf reprendre d'abord."); return end
+		if enPause() then dire("tu es en pause, fais /lbf reprendre d'abord."); return end
 		planifierEnvoi(1, true)
-		dire("tes métiers partent vers la guilde.")
+		dire("envoi en cours.")
 	elseif cmd == "qui" then
 		chercher(reste)
 	else
 		local d, avec = db(), 0
-		for _, m in pairs(d.membres) do if type(m) == "table" and compter(m.metiers) > 0 then avec = avec + 1 end end
-		dire(string.format("version %s · partage %s · %d membre(s) dans ton carnet, dont %d avec leurs métiers.", VERSION, enPause() and "en pause" or "actif", compter(d.membres), avec))
+		for _, m in pairs(d.membres) do
+			if type(m) == "table" and compter(m.metiers) > 0 then avec = avec + 1 end
+		end
+		dire(string.format("v%s, partage %s, %d membres connus (%d avec métiers).", VERSION, enPause() and "en pause" or "actif", compter(d.membres), avec))
 		local m = maFiche()
 		if m then
 			local L = {}
 			for _, x in pairs(m.metiers) do L[#L + 1] = string.format("%s %s (%d recettes)", x.nom or "?", x.rang or "?", #(x.ids or {})) end
-			dire("tes métiers : " .. (#L > 0 and table.concat(L, ", ") or "aucun relevé : ouvre la fenêtre de chacun de tes métiers."))
+			dire("tes métiers : " .. (#L > 0 and table.concat(L, ", ") or "rien encore, ouvre la fenêtre de chacun de tes métiers."))
 		end
-		dire("ce que l'addon partage avec la guilde : le nom de ton perso, sa classe, tes métiers et leur niveau, tes recettes connues et tes recharges. Rien d'autre.")
-		dire("/lbf envoyer : renvoyer tes métiers ; /lbf qui <recette> : qui sait la faire ; /lbf pause : ne plus rien partager.")
+		dire("partagé avec la guilde : nom, classe, métiers, recettes, recharges. Rien d'autre.")
+		dire("/lbf qui <recette>, /lbf envoyer, /lbf pause, /lbf reprendre")
 	end
 end
 
------------------------------------------------------------------------------------------------- évènements
+---------------------------------------------------------------- évènements
+
 local f = CreateFrame("Frame")
 local connecte = false
 for _, ev in ipairs({ "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "TRADE_SKILL_SHOW", "TRADE_SKILL_LIST_UPDATE", "TRADE_SKILL_CLOSE",
-	"NEW_RECIPE_LEARNED", "CHAT_MSG_ADDON", "PLAYER_REGEN_ENABLED", "SKILL_LINES_CHANGED" }) do
+	"NEW_RECIPE_LEARNED", "CHAT_MSG_ADDON", "PLAYER_REGEN_ENABLED", "SKILL_LINES_CHANGED", "GUILD_ROSTER_UPDATE" }) do
 	pcall(f.RegisterEvent, f, ev)
 end
+
 f:SetScript("OnEvent", function(_, ev, a1, a2, a3, a4)
 	if ev == "CHAT_MSG_ADDON" then
 		recevoir(a1, a2, a3, a4)
 	elseif ev == "PLAYER_LOGIN" then
-		if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then sur(C_ChatInfo.RegisterAddonMessagePrefix, PREFIXE)
-		elseif RegisterAddonMessagePrefix then sur(RegisterAddonMessagePrefix, PREFIXE) end
-	elseif ev == "PLAYER_ENTERING_WORLD" then
-		if not connecte then
-			connecte = true
-			-- La première fois : ce qui est partagé, en deux lignes, et comment l'arrêter
-			if not db().accueil then
-				db().accueil = true
-				C_Timer.After(8, function()
-					dire("partage avec ta guilde le nom de ton perso, sa classe, tes métiers et leur niveau, tes recettes connues et tes recharges. Rien d'autre : ni sacs, ni or, ni position, ni discussions.")
-					dire("/lbf pour le détail, /lbf pause pour ne plus rien partager. Le fichier LISEZMOI.txt de l'addon explique tout.")
-				end)
-			end
-			C_Timer.After(5, function() pcall(lireRangs) end)
-			-- 15 s après la connexion : « envoyez vos métiers », puis ta propre fiche un peu plus tard
-			C_Timer.After(15, function() file[#file + 1] = "Q:" .. VERSION; lancerFile() end)
-			planifierEnvoi(math.random(25, 45), true)
+		if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
+			sur(C_ChatInfo.RegisterAddonMessagePrefix, PREFIXE)
+		elseif RegisterAddonMessagePrefix then
+			sur(RegisterAddonMessagePrefix, PREFIXE)
 		end
+	elseif ev == "PLAYER_ENTERING_WORLD" then
+		if connecte then return end
+		connecte = true
+		if not db().accueil then
+			db().accueil = true
+			C_Timer.After(8, function()
+				dire("partage avec ta guilde le nom de ton perso, sa classe, tes métiers, tes recettes et tes recharges. Rien d'autre.")
+				dire("/lbf pour le détail, /lbf pause pour arrêter.")
+			end)
+		end
+		C_Timer.After(5, function() pcall(lireRangs) end)
+		C_Timer.After(10, function()
+			if C_GuildInfo and C_GuildInfo.GuildRoster then sur(C_GuildInfo.GuildRoster) elseif GuildRoster then sur(GuildRoster) end
+		end)
+		C_Timer.After(15, function() file[#file + 1] = "Q:" .. VERSION; lancerFile() end)
+		planifierEnvoi(math.random(25, 45), true)
+	elseif ev == "GUILD_ROSTER_UPDATE" then
+		pcall(lireRoster)
 	elseif ev == "TRADE_SKILL_SHOW" then
-		metierOuvert, lus = true, {}
+		ouvert, lus = true, {}
 		planifierFenetre()
 	elseif ev == "TRADE_SKILL_LIST_UPDATE" then
-		if metierOuvert then planifierFenetre() end
+		if ouvert then planifierFenetre() end
 	elseif ev == "TRADE_SKILL_CLOSE" then
-		metierOuvert = false
+		ouvert = false
 	elseif ev == "NEW_RECIPE_LEARNED" then
-		-- Une recette apprise hors de la fenêtre : ajoutée à sa ligne de compétence
-		local id = nombre(a1)
-		local T = C_TradeSkillUI
-		if id and type(T) == "table" and T.GetProfessionInfoByRecipeID then
-			local info = sur(T.GetProfessionInfoByRecipeID, id)
-			local ligne = type(info) == "table" and nombre(info.parentProfessionID)
-			if type(info) == "table" and (not ligne or ligne <= 0) then ligne = nombre(info.professionID) end
-			local m = maFiche()
-			if ligne and ligne > 0 and m then
-				local x = metier(m, ligne)
-				local deja = false
-				for _, v in ipairs(x.ids) do if v == id then deja = true; break end end
-				if not deja then x.ids[#x.ids + 1] = id; m.maj = maintenant(); planifierEnvoi(10, true) end
-			end
-		end
+		local id, T = nombre(a1), C_TradeSkillUI
+		if not id or type(T) ~= "table" or not T.GetProfessionInfoByRecipeID then return end
+		local info = sur(T.GetProfessionInfoByRecipeID, id)
+		if type(info) ~= "table" then return end
+		local ligne = nombre(info.parentProfessionID)
+		if not ligne or ligne <= 0 then ligne = nombre(info.professionID) end
+		local m = maFiche()
+		if not ligne or ligne <= 0 or not m then return end
+		local x = metier(m, ligne)
+		for _, v in ipairs(x.ids) do if v == id then return end end
+		x.ids[#x.ids + 1] = id
+		m.maj = now()
+		planifierEnvoi(10, true)
 	elseif ev == "PLAYER_REGEN_ENABLED" then
-		if aRefaire then aRefaire = false; if metierOuvert then planifierFenetre() end end
+		if aRefaire then
+			aRefaire = false
+			if ouvert then planifierFenetre() end
+		end
 	elseif ev == "SKILL_LINES_CHANGED" then
 		pcall(lireRangs)
 	end
