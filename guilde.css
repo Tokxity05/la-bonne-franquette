@@ -572,13 +572,6 @@ a.lv-titre-nom:hover { color: #fff2a8; }
 .gd-gros-bouton .icon { border-radius: 50%; }
 .gd-version { margin: 0; color: var(--text-dim); font-size: .9rem; }
 .gd-version b { color: var(--gold); font-family: var(--font-title); }
-.gd-etapes { list-style: none; counter-reset: etape; display: grid; gap: 12px; margin: 0; padding: 0; }
-.gd-etapes li { position: relative; counter-increment: etape; min-height: 40px; padding: 10px 12px 10px 58px; background: rgba(0, 0, 0, .3); border: 1px solid rgba(184, 145, 58, .25); border-radius: 4px; }
-.gd-etapes li::before { content: counter(etape); position: absolute; left: 10px; top: 10px; width: 34px; height: 34px; display: grid; place-items: center;
-  font-family: var(--font-title); font-weight: 900; font-size: 1.05rem; color: var(--gold); background: radial-gradient(circle at 35% 30%, #3a2d1c, #0d0a07);
-  border-radius: 50%; box-shadow: 0 0 0 1px #000, 0 0 0 3px #a8822e, 0 0 0 4px #000; }
-.gd-etapes p { margin: 0; }
-.gd-etapes p + p { margin-top: 4px; }
 .gd-texte p:last-child { margin-bottom: 0; }
 .gd-commandes { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; align-items: baseline; }
 .gd-commandes dt { margin: 0; }
@@ -642,7 +635,6 @@ a.lv-titre-nom:hover { color: #fff2a8; }
   .lv-tete { gap: 12px; }
   .gd-commandes { grid-template-columns: 1fr; gap: 2px; }
   .gd-commandes dd { margin-bottom: 8px; }
-  .gd-etapes li { padding-left: 54px; }
 }
 /* Au doigt, des cibles d'au moins 32 px */
 @media (pointer: coarse) {
@@ -653,3 +645,8 @@ a.lv-titre-nom:hover { color: #fff2a8; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 .gd-pied .gd-pied-copy { margin-top: 10px; font-family: var(--font-title, "Cinzel", Georgia, serif); color: var(--gold-soft, #f0c75e); letter-spacing: .04em; }
+/* Le logo de WoW Forever : en tête de l'accueil, et petit dans la barre du menu */
+.gd-logo { display: block; width: min(240px, 60vw); height: auto; margin: 0 auto 4px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .7)); }
+.gd-marque { flex-direction: row; align-items: center; gap: 9px; }
+.gd-marque-logo { width: 38px; height: auto; flex: none; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .7)); }
+.gd-marque-txt { display: flex; flex-direction: column; line-height: 1.1; }
