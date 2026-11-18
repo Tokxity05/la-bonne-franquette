@@ -19,6 +19,9 @@ Ce qu'il partage, et SEULEMENT ça
 C'est tout. Ces informations, tes compagnons de guilde peuvent déjà les voir en jeu quand tu leur montres
 ta fenêtre de métier. L'addon les rassemble seulement au même endroit.
 
+Il fait aussi passer, de membre en membre, les fiches des autres qu'il a déjà reçues (les mêmes informations,
+rien de plus) : comme ça, tout le monde finit par arriver sur le site, même sans croiser l'officier qui le publie.
+
 Il lit aussi la liste des membres de la guilde, sur place, sans jamais l'envoyer : elle sert seulement à
 oublier ceux qui ont quitté la guilde, et à connaître le nom des rangs de la guilde pour le site.
 
@@ -36,9 +39,9 @@ Ce qu'il ne fait JAMAIS
 
 Comment le site est mis à jour
 ------------------------------
-Chaque exemplaire de l'addon garde ce que les autres membres lui envoient. L'exemplaire d'un officier sert
-de relais : à sa déconnexion, ou quand il fait /reload, son ordinateur publie ces informations sur le site.
-Tu apparais donc sur le site après avoir été connecté en même temps que cet officier.
+Chaque exemplaire de l'addon garde ce que les autres membres lui envoient, et le fait passer aux membres
+qu'il croise. L'exemplaire d'un officier sert de relais : son ordinateur publie le carnet sur le site.
+Tu y arrives tout seul, petit à petit, au fil de tes connexions.
 
 
 Est-ce qu'il ralentit le jeu ?
