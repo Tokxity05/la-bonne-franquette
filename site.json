@@ -1,7 +1,7 @@
 {
   "_meta": {
     "updated": "2026-11-18",
-    "note": "RÉDIGÉ : la vitrine du site de guilde LBF. Une rubrique de plus = une entrée dans rubriques (et sa page dans guilde.js) ; un addon de plus = une entrée dans addons. Les données de chaque rubrique vivent dans data/ (membres.json, guilde.json pour les métiers). service = le relais des codes collés (/lbf code), un Worker Cloudflare dont le code est dans service/worker.js. rangs = le nom des rangs de la guilde (0 = chef de guilde), donnés par Melvin le 18/11 : l'armurerie de Blizzard ne les donne pas. nouveautes.competenceMin = en dessous de cette compétence requise, une recette apprise ne figure pas dans les dernières nouveautés (Melvin, 18/11 : le bas niveau n'intéresse pas)."
+    "note": "RÉDIGÉ : la vitrine du site de guilde LBF. Une rubrique de plus = une entrée dans rubriques (et sa page dans guilde.js) ; un addon de plus = une entrée dans addons. Les données de chaque rubrique vivent dans data/ (membres.json, guilde.json pour les métiers). service = le relais des codes collés (/lbf code), un Worker Cloudflare dont le code est dans service/worker.js. rangs = le nom des rangs de la guilde (0 = chef de guilde), donnés par Melvin le 18/11 : l'armurerie de Blizzard ne les donne pas. nouveautes.competenceMin = en dessous de cette compétence requise, une recette apprise ne figure pas dans les dernières nouveautés (Melvin, 18/11 : le bas niveau n'intéresse pas), sauf si elle est BiS pour une spé, ou propre à Forever à partir de foreverMin."
   },
   "service": "https://lbf-relais.lbf-guilde.workers.dev",
   "guilde": {
@@ -11,7 +11,7 @@
     "presentation": ""
   },
   "rangs": { "0": "Chef de guilde", "1": "Officier", "2": "Raider", "3": "Reroll", "4": "Membre" },
-  "nouveautes": { "competenceMin": 200 },
+  "nouveautes": { "competenceMin": 200, "foreverMin": 100 },
   "rubriques": [
     { "id": "membres", "titre": "Membres", "icone": "achievement_guildperk_everybodysfriend", "desc": "Les membres de la guilde, leur classe, leur niveau et leur fiche officielle." },
     { "id": "metiers", "titre": "Métiers", "icone": "trade_blacksmithing", "desc": "Qui sait fabriquer quoi : les recettes de tous les membres mises en commun." },
