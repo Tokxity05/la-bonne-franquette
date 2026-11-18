@@ -2,7 +2,7 @@
 ## Title: Métiers LBF
 ## Notes: La Bonne Franquette : partage tes métiers, tes recettes et tes recharges avec la guilde, pour le site « qui sait faire quoi ». /lbf
 ## Author: Tokxity
-## Version: 1.7.0
+## Version: 1.7.1
 ## IconTexture: Interface\Icons\INV_Misc_Book_11
 ## SavedVariables: MetierLBFDB
 
