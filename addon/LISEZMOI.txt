@@ -1,4 +1,4 @@
-MÉTIER LBF : l'addon des métiers de La Bonne Franquette
+MÉTIERS LBF : l'addon des métiers de La Bonne Franquette
 ========================================================
 
 À quoi il sert
@@ -20,7 +20,7 @@ C'est tout. Ces informations, tes compagnons de guilde peuvent déjà les voir e
 ta fenêtre de métier. L'addon les rassemble seulement au même endroit.
 
 Il lit aussi la liste des membres de la guilde, sur place, sans jamais l'envoyer : elle sert seulement à
-oublier ceux qui ont quitté la guilde, pour qu'ils n'apparaissent plus sur le site.
+oublier ceux qui ont quitté la guilde, et à connaître le nom des rangs de la guilde pour le site.
 
 
 Ce qu'il ne fait JAMAIS
@@ -69,16 +69,16 @@ Pour ne pas l'utiliser du tout, ne l'installe pas, ou décoche-le dans la liste 
 Vérifier par toi-même
 ---------------------
 Tout le code est dans le fichier MetierLBF.lua, à côté de celui-ci, en clair : tu peux l'ouvrir avec le
-Bloc-notes. Le site de la guilde le montre aussi (page « L'addon »).
+Bloc-notes. Le site de la guilde le montre aussi (rubrique « Addons »).
 
 
 Installer
 ---------
 1. Décompresse le zip dans  World of Warcraft\_forever_\Interface\AddOns\
    (tu dois obtenir le dossier  ...\AddOns\MetierLBF\ , avec MetierLBF.toc et MetierLBF.lua dedans).
-2. Lance le jeu. À l'écran des personnages, bouton « AddOns » : coche « Métier LBF »
+2. Lance le jeu. À l'écran des personnages, bouton « AddOns » : coche « Métiers LBF »
    (et « Charger les addons périmés » si la ligne est grisée).
-3. En jeu, ouvre une fois la fenêtre de chacun de tes métiers. C'est tout.
+3. En jeu, ouvre une fois chacun de tes métiers. C'est tout.
 
 Mettre à jour : télécharge le nouveau zip sur le site, décompresse-le au même endroit en remplaçant l'ancien
 dossier, puis relance le jeu. Quand un membre a une version plus récente que la tienne, l'addon te prévient :
