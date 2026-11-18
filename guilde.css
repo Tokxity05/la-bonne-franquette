@@ -1,0 +1,654 @@
+/* ==========================================================================
+   Métier LBF — le site de la guilde La Bonne Franquette (World of Warcraft: Forever)
+   Thème repris du Grimoire d'Azeroth (site/css/wow.css) : tokens, fond en pierre, cadres,
+   et la fenêtre de métier du jeu refaite en CSS (bloc « 982 · Ton livre d'artisanat », préfixe lv-).
+   Préfixe gd- pour ce qui est propre au site de la guilde. Pas de framework.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* Or & encre */
+  --gold: #ffd100;            /* or des titres en jeu */
+  --gold-soft: #f0c75e;
+  --gold-dim: #b8913a;
+  --gold-dark: #6e5418;
+  --text: #e8dcc0;
+  --text-dim: #a89a7c;
+  --white: #ffffff;
+  --green-ui: #1eff00;
+  --red-ui: #ff2020;
+
+  /* Pierre & bois */
+  --stone-950: #07060a;
+  --stone-900: #0e0c0b;
+  --stone-850: #15120f;
+  --stone-800: #1c1814;
+  --stone-700: #2a241c;
+  --stone-600: #3b3226;
+
+  /* Qualité des objets */
+  --q-poor: #9d9d9d;
+  --q-common: #ffffff;
+  --q-uncommon: #1eff00;
+  --q-rare: #0070dd;
+  --q-epic: #a335ee;
+  --q-legendary: #ff8000;
+  --q-artifact: #e6cc80;
+
+  /* Couleurs de classe (Vanilla) */
+  --c-druid: #ff7d0a;
+  --c-hunter: #abd473;
+  --c-mage: #69ccf0;
+  --c-paladin: #f58cba;
+  --c-priest: #ffffff;
+  --c-rogue: #fff569;
+  --c-shaman: #0070de;
+  --c-warlock: #9482c9;
+  --c-warrior: #c79c6e;
+
+  --font-title: "Cinzel", "Trajan Pro", Georgia, serif;
+  --font-body: Georgia, "Times New Roman", serif;
+
+  --radius: 4px;
+  --maxw: 1180px;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+button, input, select, textarea { font-family: inherit; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.55;
+  background-color: var(--stone-900);
+  overflow-x: hidden;
+}
+/* Le fond : une pierre taillée, éclairée d'en haut ; vignette et lueur par-dessus (wow.css, body::before et ::after) */
+body::before, body::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+body::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.009 .014' numOctaves='6' seed='11' stitchTiles='stitch' result='n'/%3E%3CfeDiffuseLighting in='n' lighting-color='%23846142' surfaceScale='5' diffuseConstant='.92'%3E%3CfeDistantLight azimuth='235' elevation='58'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E") 0 0 / 600px 600px; filter: brightness(.42) saturate(.85); }
+body::after { background: radial-gradient(ellipse 70% 50% at 50% -8%, rgba(255, 170, 60, .2), transparent 62%), radial-gradient(ellipse 96% 84% at 50% 34%, transparent 42%, rgba(6, 4, 3, .82) 100%); }
+
+a { color: var(--gold-soft); text-decoration: none; }
+a:hover { color: var(--gold); text-decoration: underline; }
+:focus-visible { outline: 2px solid #ffe48a; outline-offset: 2px; }
+::selection { background: rgba(255, 209, 0, .35); color: #fff; }
+
+/* Barre de défilement façon UI */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--stone-950); }
+::-webkit-scrollbar-thumb { background: linear-gradient(90deg, var(--stone-600), var(--stone-700)); border: 2px solid var(--stone-950); border-radius: 6px; }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-title);
+  color: var(--gold);
+  letter-spacing: .02em;
+  line-height: 1.2;
+  margin: 0 0 .5em;
+  text-shadow: 0 2px 0 #000, 0 0 12px rgba(0, 0, 0, .6);
+}
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.2rem; }
+p { margin: 0 0 .8em; }
+code {
+  font-family: Consolas, "Cascadia Mono", Menlo, monospace;
+  font-size: .86em;
+  padding: 1px 6px;
+  color: #fff3c4;
+  background: rgba(0, 0, 0, .55);
+  border: 1px solid rgba(184, 145, 58, .35);
+  border-radius: 3px;
+  overflow-wrap: anywhere;
+}
+
+.muted { color: var(--text-dim); }
+.small { font-size: .88rem; }
+.center { text-align: center; }
+
+.rune-divider {
+  height: 14px;
+  max-width: 520px;
+  margin: 12px auto 0;
+  background:
+    radial-gradient(circle, var(--gold) 0 3px, transparent 4px) center / 14px 14px no-repeat,
+    linear-gradient(90deg, transparent, var(--gold-dim) 30%, var(--gold-dim) 70%, transparent) center / 100% 1px no-repeat;
+}
+
+/* Lien d'évitement (clavier) */
+.gd-saut { position: absolute; left: 8px; top: -60px; z-index: 100; padding: 6px 12px; background: var(--stone-800); border: 1px solid var(--gold-dim); border-radius: 3px; }
+.gd-saut:focus { top: 8px; }
+
+/* --------------------------------------------------------------------------
+   Le menu du haut (d'après .tabs et .tab de wow.css : plaques de cuir rouge cerclées d'or)
+   -------------------------------------------------------------------------- */
+.gd-menu {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: linear-gradient(180deg, rgba(14, 12, 11, .97), rgba(14, 12, 11, .9));
+  border-top: 1px solid #000;
+  border-bottom: 2px solid var(--gold-dark);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .6);
+}
+.gd-menu::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, #b98f2c 22%, #fff1b0 50%, #b98f2c 78%, transparent);
+  box-shadow: 0 0 12px rgba(255, 190, 60, .5);
+}
+.gd-menu-in { max-width: var(--maxw); margin: 0 auto; padding: 8px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; }
+.gd-marque { display: flex; flex-direction: column; line-height: 1.1; text-decoration: none !important; }
+.gd-marque-nom { font-family: var(--font-title); font-weight: 900; font-size: 1.25rem; letter-spacing: .04em; color: transparent;
+  background: linear-gradient(180deg, #fff6c8 0%, #ffd94a 46%, #dc9c20 100%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 1px 0 #000); }
+.gd-marque-sous { font-family: var(--font-title); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-dim); }
+.gd-marque:hover .gd-marque-sous { color: var(--gold-soft); }
+.gd-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.gd-lien {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 5px 16px;
+  font-family: var(--font-title);
+  font-size: .9rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--gold);
+  text-shadow: 0 1px 0 #000;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 120, 70, .2), transparent 62%) padding-box,
+    linear-gradient(180deg, #701411 0%, #4a0b09 52%, #2a0504 100%) padding-box,
+    linear-gradient(180deg, #f5d06a 0%, #7d5f1a 38%, #4b3710 62%, #c9a13f 100%) border-box;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .55), inset 0 1px 0 1px rgba(255, 225, 150, .15), inset 0 -7px 10px -5px rgba(0, 0, 0, .6), 0 2px 4px rgba(0, 0, 0, .7);
+  transition: transform .18s, box-shadow .2s;
+}
+.gd-lien:hover { color: #fff2a8; text-decoration: none; transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .55), inset 0 1px 0 1px rgba(255, 225, 150, .24), inset 0 -7px 10px -5px rgba(0, 0, 0, .6), 0 6px 12px rgba(0, 0, 0, .7), 0 0 12px rgba(255, 170, 40, .35); }
+.gd-lien.actif, .gd-deroule.actif > .gd-lien {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 150, 80, .42), transparent 66%) padding-box,
+    linear-gradient(180deg, #a51e18 0%, #6d0f0b 58%, #3e0806 100%) padding-box,
+    linear-gradient(180deg, #fff1b0 0%, #e0b23e 45%, #8a6a1c 62%, #ffe48a 100%) border-box;
+}
+.gd-fleche { font-size: .7rem; transition: transform .15s; }
+.gd-deroule { position: relative; }
+.gd-deroule > summary { list-style: none; }
+.gd-deroule > summary::-webkit-details-marker { display: none; }
+.gd-deroule[open] .gd-fleche { transform: rotate(180deg); }
+.gd-panneau {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
+  width: max-content; min-width: 240px; max-width: calc(100vw - 32px);
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 6px; padding: 10px;
+  background: linear-gradient(180deg, var(--stone-800), var(--stone-850));
+  border: 2px solid #000; border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--gold-dark), inset 0 0 0 3px #0b0908, inset 0 0 0 4px rgba(184, 145, 58, .35), 0 10px 24px rgba(0, 0, 0, .75);
+}
+.gd-panneau-lien { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 4px 10px 4px 6px; color: var(--text); border-radius: 3px; white-space: nowrap; }
+.gd-panneau-lien:hover, .gd-panneau-lien.actif { background: rgba(255, 209, 0, .1); color: var(--gold); text-decoration: none; }
+.gd-panneau-lien .gd-compte { margin-left: auto; }
+
+/* --------------------------------------------------------------------------
+   Mise en page
+   -------------------------------------------------------------------------- */
+.gd-vue { flex: 1; width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 26px 16px 60px; outline: none; }
+.stack > * + * { margin-top: 18px; }
+.stack > .frame + .frame { margin-top: 34px; }
+.gd-chargement { padding: 60px 0; text-align: center; color: var(--text-dim); font-family: var(--font-title); }
+
+.gd-pied { text-align: center; padding: 24px 16px 40px; color: var(--text-dim); font-size: .82rem; border-top: 1px solid rgba(184, 145, 58, .2); }
+.gd-pied p { max-width: 760px; margin: 0 auto; }
+.gd-pied .gd-pied-transp { margin-bottom: 6px; color: var(--text); }
+
+/* Le fil d'Ariane */
+.gd-fil { margin: 0 0 22px; font-size: .86rem; color: var(--text-dim); }
+.gd-fil a { color: var(--gold-soft); }
+
+/* --------------------------------------------------------------------------
+   Cadre : panneau en pierre à liseré doré (fenêtres de l'UI) — .frame de wow.css
+   -------------------------------------------------------------------------- */
+.frame {
+  position: relative;
+  padding: 22px 22px 18px;
+  background:
+    radial-gradient(ellipse at top, rgba(255, 200, 120, .05), transparent 60%),
+    linear-gradient(180deg, var(--stone-800), var(--stone-850));
+  border: 2px solid #000;
+  border-radius: var(--radius);
+  box-shadow:
+    inset 0 0 0 1px var(--gold-dark),
+    inset 0 0 0 3px #0b0908,
+    inset 0 0 0 4px rgba(184, 145, 58, .35),
+    inset 0 0 40px rgba(0, 0, 0, .65),
+    0 8px 22px rgba(0, 0, 0, .7);
+}
+/* rivets dorés aux coins */
+.frame::before, .frame::after {
+  content: "";
+  position: absolute;
+  width: 10px; height: 10px;
+  background: radial-gradient(circle at 35% 35%, #fff3b0, var(--gold) 40%, #7a5200 80%);
+  border: 1px solid #000;
+  border-radius: 50%;
+  top: 6px;
+}
+.frame::before { left: 6px; }
+.frame::after { right: 6px; }
+/* Plaque de titre centrée sur le bord supérieur */
+.frame-title {
+  display: table;
+  max-width: 100%;
+  margin: -36px auto 14px;
+  padding: 5px 22px 4px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--gold);
+  letter-spacing: .06em;
+  text-align: center;
+  text-shadow: 0 1px 0 #000;
+  background: linear-gradient(180deg, #2d2620, #120f0c);
+  border: 1px solid #000;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px var(--gold-dim), 0 3px 8px rgba(0, 0, 0, .7);
+}
+.frame.titre { margin-top: 34px; }
+
+/* --------------------------------------------------------------------------
+   Icônes (bouton de barre d'action), qualité, classes, difficulté
+   -------------------------------------------------------------------------- */
+.icon {
+  display: inline-block;
+  flex: none;
+  width: 40px; height: 40px;
+  border: 1px solid #000;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(184, 145, 58, .55), 0 2px 4px rgba(0, 0, 0, .7);
+  background: #000;
+  vertical-align: middle;
+}
+.icon.xs { width: 18px; height: 18px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .8); }
+.icon.sm { width: 22px; height: 22px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .8); }
+.icon.md { width: 32px; height: 32px; }
+.icon.lg { width: 56px; height: 56px; }
+.icon.xl { width: 72px; height: 72px; }
+/* Bordure à la couleur de la qualité */
+.qb-poor { --qb: var(--q-poor); --qb-glow: transparent; }
+.qb-common { --qb: #bfbfbf; --qb-glow: transparent; }
+.qb-uncommon { --qb: var(--q-uncommon); --qb-glow: rgba(30, 255, 0, .35); }
+.qb-rare { --qb: var(--q-rare); --qb-glow: rgba(0, 112, 221, .45); }
+.qb-epic { --qb: var(--q-epic); --qb-glow: rgba(163, 53, 238, .5); }
+.qb-legendary { --qb: var(--q-legendary); --qb-glow: rgba(255, 128, 0, .6); }
+.qb-artifact { --qb: var(--q-artifact); --qb-glow: rgba(230, 204, 128, .5); }
+.icon[class*="qb-"] { box-shadow: 0 0 0 2px var(--qb), 0 0 8px var(--qb-glow); }
+.icon.sm[class*="qb-"], .icon.xs[class*="qb-"] { box-shadow: 0 0 0 1px var(--qb), 0 0 4px var(--qb-glow); }
+
+.q-poor { color: var(--q-poor); }
+.q-common { color: var(--q-common); }
+.q-uncommon { color: var(--q-uncommon); }
+.q-rare { color: var(--q-rare); }
+.q-epic { color: var(--q-epic); }
+.q-legendary { color: var(--q-legendary); }
+.q-artifact { color: var(--q-artifact); }
+a.q-common, a.q-uncommon, a.q-rare, a.q-epic, a.q-poor, a.q-legendary, a.q-artifact { text-decoration: none; }
+a.q-common:hover, a.q-uncommon:hover, a.q-rare:hover, a.q-epic:hover { text-decoration: underline; }
+
+.c-druid { color: var(--c-druid); }
+.c-hunter { color: var(--c-hunter); }
+.c-mage { color: var(--c-mage); }
+.c-paladin { color: var(--c-paladin); }
+.c-priest { color: var(--c-priest); }
+.c-rogue { color: var(--c-rogue); }
+.c-shaman { color: var(--c-shaman); }
+.c-warlock { color: var(--c-warlock); }
+.c-warrior { color: var(--c-warrior); }
+.c-inconnue { color: var(--text); }
+
+/* Les paliers de la fenêtre de métier (recettes.js > paliers) */
+.rc-paliers { display: inline-flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; cursor: help; }
+.rc-paliers b, .lv-requise b { font-weight: 700; text-shadow: 0 1px 0 #000; }
+.rc-paliers .o, .lv-requise .o { color: #ff8040; } .rc-paliers .j { color: #ffff00; } .rc-paliers .v { color: #40bf40; } .rc-paliers .g { color: #a0a0a0; }
+
+/* Boutons (.btn de wow.css) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 6px 16px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: .88rem;
+  color: var(--gold);
+  cursor: pointer;
+  background: linear-gradient(180deg, #8c1611, #520b08 60%, #330605);
+  border: 1px solid #000;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 209, 0, .4), 0 2px 3px rgba(0, 0, 0, .6);
+  text-shadow: 0 1px 0 #000;
+}
+.btn:hover { filter: brightness(1.2); text-decoration: none; color: #fff2a8; }
+.btn.ghost { background: linear-gradient(180deg, #2b251e, #15110d); box-shadow: inset 0 0 0 1px var(--gold-dark), 0 2px 3px rgba(0, 0, 0, .6); }
+.gd-compte { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 6px; font-family: var(--font-body); font-size: .74rem; font-weight: 700;
+  color: var(--gold-soft); background: rgba(0, 0, 0, .5); border: 1px solid rgba(184, 145, 58, .4); border-radius: 10px; letter-spacing: 0; text-shadow: none; }
+.gd-plus { display: block; width: 100%; margin-top: 8px; min-height: 34px; padding: 6px; color: var(--gold-soft); font-size: .86rem; cursor: pointer;
+  background: rgba(0, 0, 0, .3); border: 1px dashed rgba(184, 145, 58, .45); border-radius: 3px; }
+.gd-plus:hover { color: var(--gold); background: rgba(255, 209, 0, .06); }
+
+/* --------------------------------------------------------------------------
+   Accueil
+   -------------------------------------------------------------------------- */
+.gd-hero { text-align: center; margin: 4px 0 30px; }
+.gd-hero h1 { margin: 0; font-size: 2.6rem; font-weight: 900; letter-spacing: .05em; color: transparent;
+  background: linear-gradient(180deg, #fff6c8 0%, #ffd94a 46%, #dc9c20 100%); -webkit-background-clip: text; background-clip: text;
+  text-shadow: none; filter: drop-shadow(0 2px 0 #000) drop-shadow(0 0 14px rgba(0, 0, 0, .7)); }
+.gd-hero-guilde { margin: 2px 0 0; font-family: var(--font-title); font-weight: 700; font-size: 1rem; letter-spacing: .18em; text-transform: uppercase; color: var(--gold-dim); }
+.gd-hero-resume { margin: 12px 0 0; color: var(--text-dim); }
+.gd-hero-petit h1 { font-size: 2rem; }
+.gd-encart { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 4px 14px 4px 6px; font-size: .86rem; color: var(--text);
+  background: rgba(0, 0, 0, .45); border: 1px solid rgba(184, 145, 58, .45); border-radius: 18px; }
+.gd-encart b { font-family: var(--font-title); color: var(--gold); }
+.gd-encart span { color: var(--gold-soft); }
+.gd-encart:hover { text-decoration: none; border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 209, 0, .2); }
+
+/* La grande recherche « Qui sait faire… ? » */
+.gd-recherche { padding-top: 26px; }
+.gd-cherche {
+  display: block; width: 100%; height: 50px; padding: 0 16px 0 46px;
+  color: #fff; font-size: 1.1rem; border: 1px solid #6b5420; border-radius: 4px;
+  background: #050403 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 12 12'%3E%3Ccircle cx='5' cy='5' r='3.6' fill='none' stroke='%23b8913a' stroke-width='1.3'/%3E%3Cpath d='M8 8l3 3' stroke='%23b8913a' stroke-width='1.3'/%3E%3C/svg%3E") 14px 50% no-repeat;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, .8), 0 0 0 1px #000;
+}
+.gd-cherche::placeholder { color: #7d7466; }
+.gd-cherche:focus { outline: none; border-color: var(--gold-dim); box-shadow: inset 0 0 12px rgba(0, 0, 0, .8), 0 0 0 1px #000, 0 0 12px rgba(255, 209, 0, .25); }
+.gd-aide, .gd-aucun { margin: 12px 2px 0; color: var(--text-dim); font-size: .9rem; }
+.gd-aucun { color: var(--text); }
+.gd-resultats:empty { display: none; }
+.gd-groupe { margin-top: 18px; }
+.gd-groupe-titre { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; padding-bottom: 4px; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--gold-dim); text-shadow: none; border-bottom: 1px solid rgba(184, 145, 58, .25); }
+.gd-res { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 8px; color: var(--text); border-radius: 3px; }
+a.gd-res:hover, .gd-res:hover { background: rgba(255, 255, 255, .05); text-decoration: none; }
+.gd-res + .gd-res { border-top: 1px solid rgba(255, 255, 255, .04); }
+.gd-res-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.gd-res-nom { font-weight: 700; overflow-wrap: anywhere; }
+.gd-res-ligne { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+/* « nouveau » : une recette apparue dans le carnet depuis moins de 7 jours */
+.gd-neuf { flex: none; display: inline-block; padding: 0 5px; font-family: var(--font-body); font-size: .68rem; font-weight: 700; line-height: 1.5; letter-spacing: .03em;
+  text-transform: uppercase; color: #1b1200; background: linear-gradient(180deg, #ffe27a, #d9a520); border-radius: 2px; box-shadow: 0 0 0 1px #000; text-shadow: none; }
+.gd-res-sous { font-size: .8rem; color: var(--text-dim); }
+.gd-res-qui { flex: none; max-width: 45%; font-size: .86rem; text-align: right; color: var(--text-dim); }
+.gd-res-ic { flex: none; line-height: 0; }
+.gd-res-comp { align-items: flex-start; }
+.gd-puces { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 5px; }
+.gd-puce { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px 2px 3px; font-size: .8rem; color: var(--text); background: rgba(0, 0, 0, .45);
+  border: 1px solid rgba(184, 145, 58, .3); border-radius: 3px; }
+.gd-puce:hover { color: var(--gold); border-color: var(--gold-dim); text-decoration: none; }
+.gd-metiers-mini { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 10px; }
+.gd-mini-metier { display: inline-flex; align-items: center; gap: 4px; font-size: .8rem; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Les métiers en tuiles */
+.gd-tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.gd-tuile {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 8px 12px; text-align: center; color: var(--text);
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 200, 120, .07), transparent 65%), linear-gradient(180deg, #1a1612, #0f0d0b);
+  border: 1px solid #000; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(184, 145, 58, .3), 0 3px 8px rgba(0, 0, 0, .55);
+  transition: box-shadow .2s, transform .15s;
+}
+.gd-tuile:hover { text-decoration: none; transform: translateY(-2px); box-shadow: inset 0 0 0 1px var(--gold-dim), 0 6px 14px rgba(0, 0, 0, .65), 0 0 14px rgba(255, 190, 60, .18); }
+.gd-tuile .icon { margin-bottom: 6px; border-radius: 50%; box-shadow: 0 0 0 2px #000, 0 0 0 4px #a8822e, 0 0 0 5px #000; }
+.gd-tuile-nom { font-family: var(--font-title); font-weight: 700; font-size: .95rem; color: var(--gold); line-height: 1.2; }
+.gd-tuile-info { font-size: .8rem; color: var(--text-dim); line-height: 1.35; }
+
+/* Les membres */
+.gd-membre, .gd-qui { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; min-height: 48px; padding: 7px 8px; color: var(--text); border-radius: 3px; }
+.gd-membre + .gd-membre, .gd-qui + .gd-qui { border-top: 1px solid rgba(255, 255, 255, .05); }
+a.gd-membre:hover, a.gd-qui:hover { background: rgba(255, 255, 255, .05); text-decoration: none; }
+.gd-membre-id, .gd-qui-id { flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.gd-membre-nom { font-weight: 700; font-size: 1rem; overflow-wrap: anywhere; }
+.gd-membre-sous { font-size: .8rem; color: var(--text-dim); }
+.gd-membre-vu { flex: none; margin-left: auto; font-size: .8rem; color: var(--text-dim); white-space: nowrap; }
+.gd-recharge { flex: none; padding: 1px 8px; font-size: .8rem; color: #ffb35c; border: 1px solid rgba(255, 140, 50, .4); border-radius: 3px; white-space: nowrap; }
+.gd-recharge.pret { color: var(--green-ui); border-color: rgba(30, 255, 0, .35); }
+.gd-nbrec { flex: none; font-size: .8rem; color: var(--text-dim); white-space: nowrap; }
+
+/* Les dernières nouveautés du carnet */
+.gd-histo { list-style: none; margin: 0; padding: 0; }
+.gd-histo li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; padding: 7px 8px; }
+.gd-histo li + li { border-top: 1px solid rgba(255, 255, 255, .05); }
+.gd-histo-date { flex: none; min-width: 96px; font-size: .8rem; color: var(--text-dim); }
+.gd-histo-txt { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.gd-histo-txt a { font-weight: 700; }
+.gd-badge-neuf { flex: none; padding: 1px 8px; font-size: .74rem; color: var(--gold); border: 1px solid var(--gold-dim); border-radius: 3px; background: rgba(255, 209, 0, .08); }
+
+/* Le rang dans un métier, en petite barre (la barre de compétence du jeu en miniature) */
+.gd-rang { flex: none; display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; font-variant-numeric: tabular-nums; }
+.gd-rang-barre { position: relative; display: block; width: 84px; height: 9px; background: #000; box-shadow: 0 0 0 1px #3d3427, 0 0 0 2px #000; overflow: hidden; border-radius: 1px; }
+.gd-rang-plein { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #a3172e 0%, #d2353a 22%, #e5622f 45%, #f0a63a 68%, #f7dc6a 88%, #fff6c8 100%); }
+.gd-rang-txt { min-width: 56px; color: var(--text); }
+
+/* --------------------------------------------------------------------------
+   982 · La fenêtre de métier du jeu refaite en CSS (repris de wow.css, préfixe lv-)
+   -------------------------------------------------------------------------- */
+.lv-page { max-width: 1060px; margin: 0 auto; padding: 18px 64px 10px 10px; }
+.lv-fenetre { position: relative; background: radial-gradient(ellipse at 50% 0%, #1f1a14, #0b0a08 70%); border: 2px solid #5c4a2c; border-radius: 9px;
+  box-shadow: 0 0 0 1px #000, inset 0 0 0 1px rgba(255, 209, 0, .14), 0 10px 30px rgba(0, 0, 0, .6); padding-bottom: 6px; }
+.lv-titre { position: relative; display: flex; align-items: center; justify-content: center; min-height: 34px; padding: 0 60px; border-radius: 7px 7px 0 0;
+  background: linear-gradient(#2c2219, #14100b); border-bottom: 1px solid #000; box-shadow: inset 0 -1px 0 rgba(255, 209, 0, .12); }
+.lv-titre-nom { margin: 0; font-family: var(--font-title); font-size: 1rem; font-weight: 600; color: #ffd100; letter-spacing: .02em; text-shadow: 0 1px 2px #000; text-align: center; }
+a.lv-titre-nom:hover { color: #fff2a8; }
+.lv-portrait { position: absolute; left: -18px; top: -16px; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #000;
+  box-shadow: 0 0 0 2px #000, 0 0 0 5px #a8822e, 0 0 0 6px #000, 0 4px 10px rgba(0, 0, 0, .7); z-index: 2; }
+.lv-portrait .icon.lg { width: 72px; height: 72px; border: 0; border-radius: 50%; box-shadow: none; }
+.lv-barre { position: relative; width: min(66%, 520px); height: 22px; margin: 16px auto 14px; background: #000; border: 1px solid #000;
+  box-shadow: 0 0 0 2px #3d3427, 0 0 0 3px #000; overflow: hidden; border-radius: 2px; }
+.lv-barre-plein { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #a3172e 0%, #d2353a 22%, #e5622f 45%, #f0a63a 68%, #f7dc6a 88%, #fff6c8 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -2px 3px rgba(0, 0, 0, .35); }
+.lv-barre-txt { position: relative; display: block; text-align: center; line-height: 22px; font-size: .8rem; color: #fff; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
+.lv-sans-barre { height: 16px; }
+.lv-corps { display: grid; grid-template-columns: minmax(0, 37%) minmax(0, 1fr); gap: 10px; padding: 0 12px 4px; }
+.lv-gauche, .lv-droite { background: #0d0b09; border: 1px solid #2d251a; border-radius: 4px; box-shadow: 0 0 0 1px #000, inset 0 0 18px rgba(0, 0, 0, .7); min-width: 0; }
+.lv-gauche { display: flex; flex-direction: column; }
+.lv-outils { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid #241d14; }
+.lv-cherche { flex: 1; min-width: 0; height: 28px; padding: 0 8px 0 24px; color: #fff; font: inherit; font-size: .84rem; border: 1px solid #4a3e2c; border-radius: 4px;
+  background: #050403 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Ccircle cx='5' cy='5' r='3.6' fill='none' stroke='%23999' stroke-width='1.4'/%3E%3Cpath d='M8 8l3 3' stroke='%23999' stroke-width='1.4'/%3E%3C/svg%3E") 7px 50% no-repeat; }
+.lv-cherche::placeholder { color: #777; }
+.lv-cherche:focus { outline: none; border-color: #8a6d2b; }
+.lv-filtre { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 10px; color: #ffd100; font: inherit; font-size: .8rem; cursor: pointer; white-space: nowrap;
+  background: linear-gradient(#6e140b, #3a0604); border: 1px solid #b8913a; border-radius: 3px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 0 0 1px #000; }
+.lv-filtre:hover { background: linear-gradient(#86190e, #4a0805); }
+.lv-liste { position: relative; max-height: 560px; min-height: 320px; overflow-y: auto; padding: 4px 4px 8px; scrollbar-width: thin; scrollbar-color: #6b5420 #0d0b09; }
+.lv-cat { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: calc(100% - 4px); margin: 7px 2px 2px; padding: 3px 8px; cursor: pointer; text-align: left;
+  font-family: var(--font-title); font-size: .92rem; font-weight: 600; color: #ffd100; text-shadow: 0 1px 1px #000;
+  background: linear-gradient(90deg, rgba(70, 48, 12, .75), rgba(22, 16, 8, .35)); border: 1px solid #6b5420; border-radius: 3px; }
+.lv-cat-nom { min-width: 0; }
+.lv-cat-droite { flex: none; display: inline-flex; align-items: center; gap: 8px; }
+.lv-plie { flex: none; width: 15px; height: 15px; display: grid; place-items: center; font-family: system-ui, sans-serif; font-size: .8rem; line-height: 1; color: #ffd100; border: 1px solid #b8913a; border-radius: 2px; background: #000; }
+.lv-rec { display: flex; align-items: center; gap: 6px; width: 100%; padding: 3px 10px 3px 24px; text-align: left; cursor: pointer; font: inherit; font-size: .88rem; color: #e8e2d4;
+  background: none; border: 0; border-radius: 2px; }
+.lv-rec-nom { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-rec:hover { background: rgba(255, 255, 255, .07); }
+.lv-rec.qd-orange { color: #ff8040; } .lv-rec.qd-yellow { color: #ffff00; } .lv-rec.qd-green { color: #40c040; } .lv-rec.qd-grey { color: #808080; } /* la couleur de difficulté, comme en jeu */
+.lv-rec.choisie { background: linear-gradient(90deg, rgba(255, 209, 0, .22), rgba(255, 209, 0, .04)); box-shadow: inset 2px 0 0 #ffd100; }
+.lv-vide { color: #8a8170; font-size: .85rem; text-align: center; padding: 18px 8px; }
+.lv-droite { position: relative; background: radial-gradient(ellipse at 55% 85%, rgba(90, 66, 30, .22), transparent 62%), #0d0b09; }
+.lv-detail { padding: 18px 20px; }
+.lv-tete { display: flex; align-items: center; gap: 16px; }
+.lv-tete-txt { min-width: 0; }
+.lv-rond { flex: none; width: 64px; height: 64px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #000;
+  box-shadow: 0 0 0 2px #000, 0 0 0 4px #a8822e, 0 0 0 5px #000; }
+.lv-rond a { line-height: 0; }
+.lv-rond .icon.lg { width: 66px; height: 66px; border: 0; border-radius: 50%; box-shadow: none; }
+.lv-nom { margin: 0; font-family: var(--font-body); font-size: 1.2rem; font-weight: 600; line-height: 1.25; letter-spacing: 0; text-shadow: 0 1px 2px #000; overflow-wrap: anywhere; }
+.lv-sous { font-size: .78rem; color: #b5ab96; margin-top: 2px; }
+.lv-desc { margin: 14px 0 6px; color: #f2eee4; font-size: .92rem; }
+.lv-stats { list-style: none; margin: 4px 0 0; padding: 0; color: #1eff00; font-size: .86rem; }
+.lv-stats .blanc { color: #fff; }
+.lv-or { margin: 18px 0 8px; color: #ffd100; font-size: .86rem; }
+.lv-comps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.lv-comp { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.lv-comp-ic { position: relative; flex: none; line-height: 0; }
+.lv-comp-ic a { line-height: 0; display: inline-block; }
+.lv-comp-ic .icon.md { width: 42px; height: 42px; }
+.lv-comp-ic b { position: absolute; right: 3px; bottom: 1px; line-height: 1.2; font-size: .78rem; color: #fff; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; pointer-events: none; }
+.lv-comp-nom { font-size: .86rem; line-height: 1.2; min-width: 0; overflow-wrap: anywhere; }
+.lv-comp-nom a, .lv-comp-nom a:visited { color: #f2eee4; } /* en jeu, les composants s'écrivent en blanc */
+.lv-bas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 20px; font-size: .8rem; color: #ffd100; }
+.lv-requise { cursor: help; }
+.lv-cd { color: #e8e2d4; }
+.lv-qui { display: inline-block; margin-top: 16px; font-size: .84rem; }
+.lv-pied { padding: 6px 14px 2px; font-size: .74rem; color: #8a8170; text-align: center; }
+.lv-onglets { position: absolute; top: 64px; right: -58px; display: flex; flex-direction: column; gap: 10px; }
+.lv-onglet { width: 50px; height: 50px; padding: 0; display: grid; place-items: center; cursor: pointer; background: #0d0b09; border: 2px solid #3d3427; border-radius: 8px;
+  box-shadow: 0 0 0 1px #000, 0 3px 8px rgba(0, 0, 0, .6); }
+.lv-onglet .icon.lg { width: 40px; height: 40px; border-radius: 5px; }
+.lv-onglet:hover { border-color: #8a6d2b; }
+.lv-onglet.actif { border-color: #ffd100; box-shadow: 0 0 0 1px #000, 0 0 12px rgba(255, 209, 0, .45); }
+.lv-onglet:not(.actif) .icon { filter: brightness(.7); }
+/* La fenêtre d'une seule recette (page d'une recette) : pas de liste, pas d'onglets */
+.lv-seule { max-width: 760px; margin: 18px auto 0; }
+.lv-seule .lv-corps { grid-template-columns: 1fr; padding-top: 22px; }
+
+/* --------------------------------------------------------------------------
+   Un membre
+   -------------------------------------------------------------------------- */
+.gd-tete-membre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.gd-tete-membre h1 { margin: 0; font-size: 1.9rem; text-shadow: 0 2px 0 #000; overflow-wrap: anywhere; }
+.gd-tete-membre .gd-membre-sous { font-size: .9rem; }
+.gd-autres { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 10px; font-size: .88rem; color: var(--text-dim); }
+.gd-autre { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+.gd-autre i { font-style: normal; color: var(--text-dim); font-size: .8rem; }
+
+/* --------------------------------------------------------------------------
+   Un métier
+   -------------------------------------------------------------------------- */
+.gd-tete-metier { display: flex; align-items: center; gap: 18px; }
+.gd-tete-metier .icon { border-radius: 50%; box-shadow: 0 0 0 2px #000, 0 0 0 5px #a8822e, 0 0 0 6px #000, 0 4px 10px rgba(0, 0, 0, .7); }
+.gd-tete-metier h1 { margin: 0; }
+.gd-tete-metier p { margin: 4px 0 0; color: var(--text-dim); }
+.gd-metier { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 34px 18px; align-items: start; margin-top: 34px; }
+.gd-metier > .frame { margin-top: 0; }
+.gd-filtre { max-width: 360px; margin: 0 0 6px; }
+.gd-filtre .lv-cherche { width: 100%; height: 34px; }
+.gd-cat-corps { padding: 2px 0 6px; }
+.gd-rec { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 4px 8px 4px 10px; color: var(--text); border-radius: 2px; }
+.gd-rec:hover { background: rgba(255, 255, 255, .06); text-decoration: none; }
+.gd-rec .gd-res-txt { line-height: 1.25; }
+.gd-rec-nom { font-size: .92rem; overflow-wrap: anywhere; }
+.gd-nb { flex: none; font-size: .78rem; color: var(--gold-soft); white-space: nowrap; }
+
+/* --------------------------------------------------------------------------
+   L'addon
+   -------------------------------------------------------------------------- */
+/* En toute transparence : ce qu'il partage, ce qu'il ne fait jamais (addon/LISEZMOI.txt) */
+.gd-pourquoi { margin: 0 0 16px; text-align: center; }
+.gd-pourquoi b { color: var(--gold); }
+.gd-transp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.gd-oui, .gd-non { padding: 12px 16px 10px; background: rgba(0, 0, 0, .32); border: 1px solid rgba(184, 145, 58, .28); border-radius: 4px; }
+.gd-oui { border-top: 2px solid rgba(30, 255, 0, .45); }
+.gd-non { border-top: 2px solid rgba(255, 80, 60, .5); }
+.gd-transp h3, .gd-point h3 { margin: 0 0 8px; font-size: .98rem; text-shadow: 0 1px 0 #000; }
+.gd-transp ul { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.gd-transp li { position: relative; padding-left: 24px; }
+.gd-transp li::before { position: absolute; left: 2px; top: 0; font-weight: 700; }
+.gd-oui li::before { content: "✓"; color: #5fd35f; }
+.gd-non li::before { content: "✕"; color: #ff6a55; }
+.gd-transp p { margin: 0; }
+.gd-points { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 22px; margin-top: 18px; }
+.gd-point p { margin: 0 0 6px; }
+.gd-docs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+.gd-telecharger { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 22px; padding: 8px 0 4px; text-align: center; }
+.gd-gros-bouton { min-height: 52px; padding: 8px 24px 8px 10px; font-size: 1.05rem; }
+.gd-gros-bouton .icon { border-radius: 50%; }
+.gd-version { margin: 0; color: var(--text-dim); font-size: .9rem; }
+.gd-version b { color: var(--gold); font-family: var(--font-title); }
+.gd-etapes { list-style: none; counter-reset: etape; display: grid; gap: 12px; margin: 0; padding: 0; }
+.gd-etapes li { position: relative; counter-increment: etape; min-height: 40px; padding: 10px 12px 10px 58px; background: rgba(0, 0, 0, .3); border: 1px solid rgba(184, 145, 58, .25); border-radius: 4px; }
+.gd-etapes li::before { content: counter(etape); position: absolute; left: 10px; top: 10px; width: 34px; height: 34px; display: grid; place-items: center;
+  font-family: var(--font-title); font-weight: 900; font-size: 1.05rem; color: var(--gold); background: radial-gradient(circle at 35% 30%, #3a2d1c, #0d0a07);
+  border-radius: 50%; box-shadow: 0 0 0 1px #000, 0 0 0 3px #a8822e, 0 0 0 4px #000; }
+.gd-etapes p { margin: 0; }
+.gd-etapes p + p { margin-top: 4px; }
+.gd-texte p:last-child { margin-bottom: 0; }
+.gd-commandes { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; align-items: baseline; }
+.gd-commandes dt { margin: 0; }
+.gd-commandes dd { margin: 0; color: var(--text); }
+.gd-nouveautes { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.gd-nouveautes li { padding: 8px 12px; background: rgba(0, 0, 0, .28); border-left: 2px solid var(--gold-dim); border-radius: 0 3px 3px 0; }
+.gd-nouveautes .gd-nv-tete { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.gd-nouveautes b { font-family: var(--font-title); color: var(--gold); }
+.gd-nouveautes .gd-nv-date { font-size: .8rem; color: var(--text-dim); }
+.gd-nouveautes p { margin: 4px 0 0; }
+.gd-nouveautes li:first-child { border-left-color: var(--gold); }
+
+/* Le carnet vide, une page introuvable */
+.gd-vide { text-align: center; }
+.gd-vide p { max-width: 620px; margin: 0 auto 16px; }
+
+/* --------------------------------------------------------------------------
+   Tablette et téléphone
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .gd-menu { position: relative; }
+  .gd-metier { grid-template-columns: 1fr; }
+  .gd-metier > .gd-metier-membres { order: -1; }
+  .lv-page { padding: 18px 8px 10px; }
+  .lv-onglets { position: static; flex-direction: row; flex-wrap: wrap; justify-content: center; margin: 4px 0 8px; }
+  .lv-corps { grid-template-columns: 1fr; }
+  .lv-liste { max-height: 300px; min-height: 0; }
+  .lv-portrait { left: -6px; top: -10px; width: 56px; height: 56px; }
+  .lv-portrait .icon.lg { width: 56px; height: 56px; }
+  .lv-titre { padding: 0 52px; }
+  .lv-comps { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  .gd-menu-in { justify-content: center; padding: 8px 10px; }
+  .gd-marque { align-items: center; width: 100%; }
+  .gd-nav { justify-content: center; gap: 6px; }
+  .gd-lien { padding: 5px 12px; font-size: .82rem; }
+  .gd-deroule { position: static; }
+  .gd-panneau { left: 8px; right: 8px; top: calc(100% + 4px); width: auto; min-width: 0; max-width: none; }
+  .gd-panneau-lien { white-space: normal; line-height: 1.2; }
+  .gd-vue { padding: 20px 16px 48px; }
+  .frame { padding: 20px 14px 14px; }
+  .frame-title { padding: 5px 14px 4px; }
+  .gd-hero h1 { font-size: 2rem; }
+  .gd-hero-guilde { font-size: .86rem; letter-spacing: .12em; }
+  .gd-res { flex-wrap: wrap; }
+  .gd-res-qui { flex-basis: 100%; max-width: none; text-align: left; padding-left: 32px; }
+  .gd-res-comp .gd-res-qui { padding-left: 0; }
+  .gd-membre-vu { margin-left: 0; }
+  .gd-rec { flex-wrap: wrap; }
+  .gd-rec .gd-res-qui { padding-left: 32px; }
+  .gd-transp, .gd-points { grid-template-columns: 1fr; }
+  .gd-histo-date { min-width: 0; width: 100%; }
+  .gd-tete-membre h1 { font-size: 1.6rem; }
+  .gd-tete-metier { gap: 14px; }
+  .gd-tete-metier .icon.xl { width: 56px; height: 56px; }
+  .gd-tete-metier h1 { font-size: 1.6rem; }
+  .lv-barre { width: calc(100% - 24px); }
+  .lv-detail { padding: 16px 14px; }
+  .lv-tete { gap: 12px; }
+  .gd-commandes { grid-template-columns: 1fr; gap: 2px; }
+  .gd-commandes dd { margin-bottom: 8px; }
+  .gd-etapes li { padding-left: 54px; }
+}
+/* Au doigt, des cibles d'au moins 32 px */
+@media (pointer: coarse) {
+  .lv-rec { padding-top: 7px; padding-bottom: 7px; }
+  .lv-cat { min-height: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
