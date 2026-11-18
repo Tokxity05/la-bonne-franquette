@@ -692,7 +692,7 @@
             point("Comment le site est mis à jour", h("p", {}, "Chaque exemplaire garde ce que les autres membres lui envoient. Celui d'un officier fait le relais : à sa déconnexion, il publie le carnet ici. Tu apparais donc sur le site après avoir été connecté en même temps que lui."),
               h("p", {}, "L'addon lit aussi la liste des membres de la guilde, sur place, sans l'envoyer : ceux qui partent disparaissent du site.")),
             point("Il ne ralentit pas le jeu", h("p", {}, "Rien en continu : une lecture quand tu ouvres une fenêtre de métier, et l'envoi de ta fiche à la connexion ou quand tu apprends une recette, en quelques petits messages espacés.")),
-            point("Tu restes maître", h("p", {}, h("code", {}, "/lbf pause"), " : plus rien ne part, et ta fiche s'efface chez les autres. ", h("code", {}, "/lbf reprendre"), " relance le partage."),
+            point("Tu restes maître", h("p", {}, "Un bouton rond près de la mini-carte montre que l'addon tourne : au survol, ce qui est partagé et si le partage est actif ; clic droit pour le mettre en pause (l'icône devient grise)."), h("p", {}, h("code", {}, "/lbf pause"), " : plus rien ne part, et ta fiche s'efface chez les autres. ", h("code", {}, "/lbf reprendre"), " relance le partage."),
               h("p", {}, "Pour disparaître aussi du site, mets l'addon en pause et préviens un officier. Personne n'est obligé de l'installer.")),
             point("Vérifier par toi-même", h("p", {}, "Le code est en clair : tu peux le lire ici, ou dans le zip avec le Bloc-notes."),
               h("div", { class: "gd-docs" }, doc("addon/LISEZMOI.txt", "Lire le LISEZMOI"), doc("addon/MetierLBF.lua.txt", "Lire le code de l'addon"))))),
@@ -709,7 +709,8 @@
           h("dt", {}, h("code", {}, "/lbf qui <recette>")), h("dd", {}, "Qui sait faire cette recette, en jeu (par exemple : /lbf qui révélation)."),
           h("dt", {}, h("code", {}, "/lbf envoyer")), h("dd", {}, "Renvoyer tes métiers maintenant."),
           h("dt", {}, h("code", {}, "/lbf pause")), h("dd", {}, "Ne plus rien partager ; les addons des membres connectés effacent ta fiche."),
-          h("dt", {}, h("code", {}, "/lbf reprendre")), h("dd", {}, "Relancer le partage.")))));
+          h("dt", {}, h("code", {}, "/lbf reprendre")), h("dd", {}, "Relancer le partage."),
+          h("dt", {}, h("code", {}, "/lbf bouton")), h("dd", {}, "Cacher ou remettre le bouton de la mini-carte.")))));
   }
 
   // ---------------------------------------------------------------- Pages sans données
