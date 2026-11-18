@@ -1,0 +1,77 @@
+MÉTIER LBF : l'addon des métiers de La Bonne Franquette
+========================================================
+
+À quoi il sert
+--------------
+À savoir qui, dans la guilde, sait fabriquer quoi. Tu cherches un enchantement ou une pièce de couture ?
+Le site de la guilde te dit qui connaît la recette. Pour ça, chaque membre qui le veut installe cet addon :
+il partage ses métiers avec la guilde, et le site les rassemble.
+
+
+Ce qu'il partage, et SEULEMENT ça
+---------------------------------
+- le nom de ton personnage ;
+- sa classe ;
+- tes métiers et leur niveau (par exemple « Enchantement 279/300 ») ;
+- les recettes que tu connais dans ces métiers ;
+- les recharges de tes recettes (par exemple « Étoffe lunaire prête dans 2 jours »).
+
+C'est tout. Ces informations, tes compagnons de guilde peuvent déjà les voir en jeu quand tu leur montres
+ta fenêtre de métier. L'addon les rassemble seulement au même endroit.
+
+
+Ce qu'il ne fait JAMAIS
+-----------------------
+- Il ne lit ni tes sacs, ni ta banque, ni ton or.
+- Il ne lit ni ta position, ni tes quêtes, ni tes discussions, ni tes amis.
+- Il ne lit pas le niveau de ton personnage, ton équipement ou tes talents.
+- Il n'envoie rien sur internet : un addon de WoW ne le peut pas. Il parle seulement aux addons des autres
+  membres, par le canal caché de la guilde, le même genre de canal qu’utilisent DBM, Details et les autres addons de groupe.
+- Il ne touche à rien dans ton jeu : il ne clique pas, ne fabrique rien, ne change aucun réglage.
+  Il lit ta fenêtre de métier quand TU l'ouvres, sans rien y changer, et jamais en combat.
+
+
+Comment le site est mis à jour
+------------------------------
+Chaque exemplaire de l'addon garde ce que les autres membres lui envoient. L'exemplaire d'un officier sert
+de relais : à sa déconnexion, ou quand il fait /reload, son ordinateur publie ces informations sur le site.
+Tu apparais donc sur le site après avoir été connecté en même temps que cet officier.
+
+
+Est-ce qu'il ralentit le jeu ?
+------------------------------
+Non. Il ne fait rien en continu :
+- une lecture quand tu ouvres une fenêtre de métier ;
+- l'envoi de ta fiche à la connexion et quand tu apprends une recette, en quelques petits messages
+  espacés d'une seconde.
+Ce qu'il garde sur ton disque pèse quelques dizaines de kilo-octets.
+
+
+Tu restes maître
+----------------
+/lbf               ce que l'addon partage, et combien de membres sont dans ton carnet
+/lbf qui <recette> qui sait faire cette recette (exemple : /lbf qui révélation)
+/lbf envoyer       renvoyer tes métiers maintenant
+/lbf pause         ne plus RIEN partager ; les addons des membres connectés effacent ta fiche
+/lbf reprendre     relancer le partage
+
+Pour disparaître aussi du site, mets l'addon en pause et préviens un officier : ta fiche en est retirée.
+Pour ne pas l'utiliser du tout, ne l'installe pas, ou décoche-le dans la liste des addons. Personne n'est obligé.
+
+
+Vérifier par toi-même
+---------------------
+Tout le code est dans le fichier MetierLBF.lua, à côté de celui-ci. Il est en clair et commenté en français :
+tu peux l'ouvrir avec le Bloc-notes. Le site de la guilde le montre aussi (page « L'addon »).
+
+
+Installer
+---------
+1. Décompresse le zip dans  World of Warcraft\_forever_\Interface\AddOns\
+   (tu dois obtenir le dossier  ...\AddOns\MetierLBF\ , avec MetierLBF.toc et MetierLBF.lua dedans).
+2. Lance le jeu. À l'écran des personnages, bouton « AddOns » : coche « Métier LBF »
+   (et « Charger les addons périmés » si la ligne est grisée).
+3. En jeu, ouvre une fois la fenêtre de chacun de tes métiers. C'est tout.
+
+Mettre à jour : télécharge le nouveau zip sur le site, décompresse-le au même endroit en remplaçant l'ancien
+dossier, puis relance le jeu. L'addon te prévient quand un autre membre a une version plus récente.
