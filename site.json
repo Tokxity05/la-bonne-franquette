@@ -1,8 +1,9 @@
 {
   "_meta": {
     "updated": "2026-11-18",
-    "note": "RÉDIGÉ : la vitrine du site de guilde LBF. Une rubrique de plus = une entrée dans rubriques (et sa page dans guilde.js) ; un addon de plus = une entrée dans addons. Les données de chaque rubrique vivent dans data/ (membres.json, guilde.json pour les métiers)."
+    "note": "RÉDIGÉ : la vitrine du site de guilde LBF. Une rubrique de plus = une entrée dans rubriques (et sa page dans guilde.js) ; un addon de plus = une entrée dans addons. Les données de chaque rubrique vivent dans data/ (membres.json, guilde.json pour les métiers). service = le relais des codes collés (/lbf code), un Worker Cloudflare dont le code est dans service/worker.js."
   },
+  "service": "https://lbf-relais.lbf-guilde.workers.dev",
   "guilde": {
     "nom": "La Bonne Franquette",
     "court": "LBF",
