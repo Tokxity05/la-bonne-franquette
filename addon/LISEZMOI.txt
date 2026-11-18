@@ -81,4 +81,5 @@ Installer
 3. En jeu, ouvre une fois la fenêtre de chacun de tes métiers. C'est tout.
 
 Mettre à jour : télécharge le nouveau zip sur le site, décompresse-le au même endroit en remplaçant l'ancien
-dossier, puis relance le jeu. L'addon te prévient quand un autre membre a une version plus récente.
+dossier, puis relance le jeu. Quand un membre a une version plus récente que la tienne, l'addon te prévient :
+un « ! » sur son bouton, la version dans sa bulle, et un rappel à chaque connexion jusqu'à la mise à jour.
