@@ -43,6 +43,11 @@ Chaque exemplaire de l'addon garde ce que les autres membres lui envoient, et le
 qu'il croise. L'exemplaire d'un officier sert de relais : son ordinateur publie le carnet sur le site.
 Tu y arrives tout seul, petit à petit, au fil de tes connexions.
 
+Si tu veux que le site te voie tout de suite, sans attendre : tape /lbf code, copie le texte qui s'affiche
+(Ctrl+C) et colle-le sur le site, rubrique Métiers › Envoyer mes métiers. C'est toi qui le fais, quand tu
+veux : l'addon n'envoie toujours rien sur internet lui-même. Le code contient les mêmes informations que plus
+haut, plus une petite clé tirée au hasard, gardée seulement chez toi, qui prouve au site que c'est bien toi.
+
 
 Est-ce qu'il ralentit le jeu ?
 ------------------------------
@@ -61,11 +66,13 @@ est actif, le dernier envoi. Clic droit : pause ou reprise (l'icône devient gri
 /lbf               ce que l'addon partage, et combien de membres sont dans ton carnet
 /lbf qui <recette> qui sait faire cette recette (exemple : /lbf qui révélation)
 /lbf envoyer       renvoyer tes métiers maintenant
+/lbf code          ton code à coller sur le site (aussi : Ctrl + clic sur le bouton)
 /lbf pause         ne plus RIEN partager ; les addons des membres connectés effacent ta fiche
 /lbf reprendre     relancer le partage
 /lbf bouton        cacher ou remettre le bouton de la mini-carte
 
-Pour disparaître aussi du site, mets l'addon en pause et préviens un officier : ta fiche en est retirée.
+Pour disparaître aussi du site, mets l'addon en pause puis colle le code de /lbf code sur le site (en pause,
+il efface ta fiche), ou préviens un officier.
 Pour ne pas l'utiliser du tout, ne l'installe pas, ou décoche-le dans la liste des addons. Personne n'est obligé.
 
 
