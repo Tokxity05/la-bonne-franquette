@@ -19,7 +19,7 @@
 (() => {
   "use strict";
 
-  const FICHIERS = { site: "site.json", membres: "data/membres.json", metiers: "data/guilde.json" };
+  const FICHIERS = { site: "site.json", membres: "data/membres.json", rangs: "data/rangs.json", metiers: "data/guilde.json" };
   const ZIP_DEFAUT = "MetierLBF.zip";
   const ADDON_METIERS = "metier-lbf";           // l'addon des métiers : ses infos viennent aussi de data/guilde.json > addon
   const NOM_ADDON_METIERS = "Métiers LBF";   // repli : le nom affiché vient de site.json, puis de data/guilde.json > addon.nom
@@ -1191,9 +1191,11 @@
   async function demarrer() {
     vue.append(h("p", { class: "gd-chargement" }, "Ouverture des registres de la guilde…"));
     const panne = () => (location.protocol === "file:" ? "fichier" : "lecture");
-    const [s, mb, mt] = await Promise.allSettled([lire(FICHIERS.site), lire(FICHIERS.membres), lire(FICHIERS.metiers)]);
+    const [s, mb, mt, rg] = await Promise.allSettled([lire(FICHIERS.site), lire(FICHIERS.membres), lire(FICHIERS.metiers), lire(FICHIERS.rangs)]);
     lireSite(s.status === "fulfilled" ? s.value : null);
     try { if (mb.status === "fulfilled") lireMembres(mb.value); else ERREUR_R = panne(); } catch (e) { R = null; ERREUR_R = "lecture"; }
+    // Les noms des rangs : data/rangs.json (lus en jeu par l'addon d'un officier), à part de la liste que GitHub relit sur l'armurerie
+    if (R && rg.status === "fulfilled" && rg.value && rg.value.rangs && typeof rg.value.rangs === "object" && !Array.isArray(rg.value.rangs)) R.rangs = { ...rg.value.rangs, ...R.rangs };
     if (mt.status === "fulfilled") {
       const d = mt.value;
       ADDON = d && typeof d.addon === "object" ? d.addon : null;
