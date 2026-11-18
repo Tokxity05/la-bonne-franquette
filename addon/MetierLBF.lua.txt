@@ -52,7 +52,7 @@ local function split(s, sep)
 end
 local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
-local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.5.0"
+local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.6.0"
 
 local function plusRecente(a, b)
 	local x, y = split(a or "0", "."), split(b or "0", ".")
@@ -572,7 +572,119 @@ local function statut()
 		dire("tes métiers : " .. (#L > 0 and table.concat(L, ", ") or "rien encore, ouvre une fois chacun de tes métiers."))
 	end
 	dire("partagé avec la guilde : nom, classe, métiers, recettes, recharges. Rien d'autre.")
-	dire("/lbf qui <recette>, /lbf envoyer, /lbf pause, /lbf reprendre, /lbf bouton")
+	dire("/lbf code (pour le site), /lbf qui <recette>, /lbf envoyer, /lbf pause, /lbf reprendre, /lbf bouton")
+end
+
+---------------------------------------------------------------- code à coller sur le site
+
+-- La clé reste dans tes SavedVariables, elle ne part jamais sur le canal de la guilde : le site s'en sert pour savoir que c'est bien toi
+local function cleDe(nom)
+	local d = db()
+	if type(d.cles) ~= "table" then d.cles = {} end
+	if not d.cles[nom] then
+		local t = {}
+		for k = 1, 16 do t[k] = string.format("%x", math.random(0, 15)) end
+		d.cles[nom] = table.concat(t)
+	end
+	return d.cles[nom]
+end
+
+local function code()
+	local m, nom = maFiche()
+	if not m then return nil, "il faut être dans la guilde." end
+	if enPause() then return "LBF1!X;" .. nom .. "!" .. cleDe(nom), true end
+	lireRangs()
+	lireRecharges()
+	if compter(m.metiers) == 0 then return nil, "ouvre d'abord une fois chacun de tes métiers." end
+	return "LBF1!" .. serialiser(nom, m, VERSION) .. "!" .. cleDe(nom)
+end
+
+local fenetre
+local function boutonPlat(parent, libelle, largeur)
+	local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
+	b:SetSize(largeur or 96, 24)
+	b:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+	b:SetBackdropColor(0.12, 0.1, 0.06, 1)
+	b:SetBackdropBorderColor(0.83, 0.69, 0.22, 0.6)
+	local fs = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	fs:SetPoint("CENTER")
+	fs:SetText(libelle)
+	b:SetScript("OnEnter", function(self) self:SetBackdropBorderColor(0.83, 0.69, 0.22, 1) end)
+	b:SetScript("OnLeave", function(self) self:SetBackdropBorderColor(0.83, 0.69, 0.22, 0.6) end)
+	return b
+end
+
+local function montrerCode()
+	local c, oubli = code()
+	if not c then dire(oubli); return end
+	if not fenetre then
+		local w = CreateFrame("Frame", "MetierLBFCode", UIParent, "BackdropTemplate")
+		w:SetSize(540, 280)
+		w:SetPoint("CENTER", 0, 60)
+		w:SetFrameStrata("DIALOG")
+		w:SetClampedToScreen(true)
+		w:SetMovable(true)
+		w:EnableMouse(true)
+		w:RegisterForDrag("LeftButton")
+		w:SetScript("OnDragStart", w.StartMoving)
+		w:SetScript("OnDragStop", w.StopMovingOrSizing)
+		w:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+		w:SetBackdropColor(0.04, 0.05, 0.07, 0.96)
+		w:SetBackdropBorderColor(0.83, 0.69, 0.22, 0.8)
+		local titre = w:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+		titre:SetPoint("TOPLEFT", 18, -16)
+		titre:SetText("Métiers LBF · ton code pour le site")
+		local aide = w:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		aide:SetPoint("TOPLEFT", 18, -42)
+		aide:SetPoint("TOPRIGHT", -18, -42)
+		aide:SetJustifyH("LEFT")
+		aide:SetSpacing(2)
+		w.aide = aide
+		local zone = CreateFrame("Frame", nil, w, "BackdropTemplate")
+		zone:SetPoint("TOPLEFT", 16, -86)
+		zone:SetPoint("BOTTOMRIGHT", -16, 48)
+		zone:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+		zone:SetBackdropColor(0, 0, 0, 0.5)
+		zone:SetBackdropBorderColor(1, 1, 1, 0.12)
+		local sf = CreateFrame("ScrollFrame", nil, zone, "UIPanelScrollFrameTemplate")
+		sf:SetPoint("TOPLEFT", 8, -8)
+		sf:SetPoint("BOTTOMRIGHT", -28, 8)
+		local eb = CreateFrame("EditBox", nil, sf)
+		eb:SetMultiLine(true)
+		eb:SetAutoFocus(false)
+		eb:SetFontObject(ChatFontNormal)
+		eb:SetWidth(460)
+		eb:SetScript("OnEscapePressed", function() w:Hide() end)
+		eb:SetScript("OnTextChanged", function(self, parUtilisateur)
+			if parUtilisateur then self:SetText(w.code or ""); self:HighlightText() end
+		end)
+		eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
+		eb:SetScript("OnMouseUp", function(self) self:HighlightText() end)
+		sf:SetScrollChild(eb)
+		w.eb = eb
+		local fermer = boutonPlat(w, "Fermer")
+		fermer:SetPoint("BOTTOMRIGHT", -16, 14)
+		fermer:SetScript("OnClick", function() w:Hide() end)
+		local nouveau = boutonPlat(w, "Refaire", 96)
+		nouveau:SetPoint("RIGHT", fermer, "LEFT", -8, 0)
+		nouveau:SetScript("OnClick", function() montrerCode() end)
+		w.pied = w:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		w.pied:SetPoint("BOTTOMLEFT", 18, 20)
+		tinsert(UISpecialFrames, "MetierLBFCode")
+		fenetre = w
+	end
+	local w = fenetre
+	w.code = c
+	if oubli then
+		w.aide:SetText("Tu es en pause : ce code |cffff8080efface ta fiche du site|r.\nCopie-le (Ctrl+C), puis colle-le sur le site de la guilde, rubrique Métiers › Envoyer mes métiers.")
+	else
+		w.aide:SetText("Copie ce code (Ctrl+C), puis colle-le sur le site de la guilde, rubrique Métiers › Envoyer mes métiers.\nIl contient ton nom, ta classe, tes métiers, tes recettes et tes recharges. Rien d'autre.")
+	end
+	w.pied:SetText(string.format("%d caractères · %s", #c, SITE:gsub("^https://", ""):gsub("/$", "")))
+	w.eb:SetText(c)
+	w:Show()
+	w.eb:SetFocus()
+	w.eb:HighlightText()
 end
 
 ---------------------------------------------------------------- bouton de la mini-carte
@@ -597,6 +709,7 @@ local function bulle(tt)
 	tt:AddLine("Clic : le détail", 0.7, 0.7, 0.7)
 	tt:AddLine("Clic droit : " .. (enPause() and "reprendre le partage" or "mettre en pause"), 0.7, 0.7, 0.7)
 	tt:AddLine("Maj + clic : renvoyer tes métiers", 0.7, 0.7, 0.7)
+	tt:AddLine("Ctrl + clic : ton code pour le site", 0.7, 0.7, 0.7)
 end
 
 local function clic(souris)
@@ -604,6 +717,8 @@ local function clic(souris)
 		if enPause() then reprendre() else pause() end
 	elseif IsShiftKeyDown and IsShiftKeyDown() then
 		envoyerMaintenant()
+	elseif IsControlKeyDown and IsControlKeyDown() then
+		montrerCode()
 	else
 		statut()
 	end
@@ -722,6 +837,7 @@ SlashCmdList.METIERLBF = function(arg)
 	elseif cmd == "envoyer" then envoyerMaintenant()
 	elseif cmd == "qui" then chercher(reste)
 	elseif cmd == "bouton" then basculerBouton()
+	elseif cmd == "code" then montrerCode()
 	else statut() end
 end
 
