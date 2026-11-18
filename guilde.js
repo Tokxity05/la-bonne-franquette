@@ -3,6 +3,8 @@
      site.json            RÉDIGÉ : la guilde (nom, court, accroche, présentation), les rubriques de l'accueil et du menu, les addons
      data/membres.json    les membres d'après l'armurerie officielle de Blizzard (niveau, race, rang, niveau d'objet, fiche officielle)
      data/guilde.json     les métiers, d'après l'addon Métiers LBF des membres : rangs, recettes connues, recharges, historique, infos de l'addon
+   Et le relais (site.json > service, un Worker Cloudflare : service/worker.js) : les codes que les membres collent eux-mêmes (/lbf code en jeu,
+   page Envoyer mes métiers) ; une fiche du relais plus récente que guilde.json passe devant tout de suite, ses recettes lues dans data/catalogue.json.
    Une rubrique de plus = une entrée dans site.json > rubriques et sa page dans RUBRIQUES (plus bas) ; un addon de plus = une entrée dans
    site.json > addons (menu, liste et page génériques ; une page propre se déclare dans PAGES_ADDONS).
    Site statique (GitHub Pages) : chemins relatifs, routage par hash, JavaScript sans bibliothèque.
@@ -10,6 +12,7 @@
      #/membres[?q=…&classe=…&niv=60]   les membres
      #/membre/<clé>[/<métier>[/<recette>]]   un membre : son profil, puis sa fenêtre de métier s'il partage ses métiers (clé = nom, nom-surnom si deux membres portent le même nom)
      #/metiers[?q=…]             la rubrique Métiers : « Qui sait faire… ? », les métiers, les nouveautés, les derniers membres vus
+     #/metiers/envoyer           coller son code (/lbf code) pour apparaître tout de suite
      #/metier/<clé>              un métier : ses recettes dans la guilde, ses membres
      #/recette/<id>              une recette et qui sait la faire
      #/addons                    les addons de la guilde
@@ -19,7 +22,7 @@
 (() => {
   "use strict";
 
-  const FICHIERS = { site: "site.json", membres: "data/membres.json", rangs: "data/rangs.json", metiers: "data/guilde.json" };
+  const FICHIERS = { site: "site.json", membres: "data/membres.json", rangs: "data/rangs.json", metiers: "data/guilde.json", catalogue: "data/catalogue.json" };
   const ZIP_DEFAUT = "MetierLBF.zip";
   const ADDON_METIERS = "metier-lbf";           // l'addon des métiers : ses infos viennent aussi de data/guilde.json > addon
   const NOM_ADDON_METIERS = "Métiers LBF";   // repli : le nom affiché vient de site.json, puis de data/guilde.json > addon.nom
@@ -35,6 +38,9 @@
     cooking: ["Cuisine", "inv_misc_food_15"], firstaid: ["Secourisme", "spell_holy_sealofsacrifice"], herbalism: ["Herboristerie", "trade_herbalism"],
     mining: ["Minage", "trade_mining"], skinning: ["Dépeçage", "inv_misc_pelt_wolf_01"], fishing: ["Pêche", "trade_fishing"] };
   const ORDRE = Object.keys(METIERS);
+  // Ligne de compétence du jeu -> métier : les fiches au format de l'addon (codes collés)
+  const LIGNES = { 129: "firstaid", 164: "blacksmithing", 165: "leatherworking", 171: "alchemy", 182: "herbalism", 185: "cooking", 186: "mining",
+    197: "tailoring", 202: "engineering", 333: "enchanting", 356: "fishing", 393: "skinning" };
   const RECOLTE = new Set(["herbalism", "mining", "skinning", "fishing"]);
   const QUALITES = new Set(["poor", "common", "uncommon", "rare", "epic", "legendary", "artifact"]);
   const EMPLACEMENTS = { Head: "Tête", Neck: "Cou", Shoulder: "Épaules", Back: "Dos", Cloak: "Dos", Chest: "Torse", Robe: "Torse", Shirt: "Chemise", Tabard: "Tabard",
@@ -606,6 +612,8 @@
     const A = infoAddon();
     return A ? h("a", { class: "gd-encart", href: lienAddon(A.id) }, icone(A.icone, "sm"), h("b", {}, A.version ? `${A.nom} ${A.version}` : A.nom), h("span", {}, "· Télécharger")) : null;
   }
+  const ICONE_ENVOI = "inv_letter_15";
+  const encartEnvoi = () => (CFG.service ? h("a", { class: "gd-encart", href: "#/metiers/envoyer" }, icone(ICONE_ENVOI, "sm"), h("b", {}, "Envoyer mes métiers"), h("span", {}, "· Ton code")) : null);
   // Le carnet des métiers vide ou illisible : ce qu'il faut faire
   function carnetVide() {
     const texte = ERREUR === "fichier"
@@ -613,12 +621,14 @@
       : ERREUR === "lecture"
         ? "Les métiers de la guilde n'ont pas pu être lus. Réessaie dans un instant."
         : `Aucun membre n'a encore partagé ses métiers. Installe l'addon ${nomAddonMetiers()} et ouvre une fois chacun de tes métiers en jeu : le carnet se remplira au prochain relais.`;
-    return h("div", { class: "stack" }, cadre("Le carnet est encore vide", h("div", { class: "gd-vide" }, h("p", {}, texte), h("a", { class: "btn", href: lienAddon(ADDON_METIERS) }, "Télécharger l'addon"))));
+    return h("div", { class: "stack" }, cadre("Le carnet est encore vide", h("div", { class: "gd-vide" }, h("p", {}, texte),
+      h("div", { class: "gd-docs" }, h("a", { class: "btn", href: lienAddon(ADDON_METIERS) }, "Télécharger l'addon"),
+        CFG.service ? h("a", { class: "btn ghost", href: "#/metiers/envoyer" }, "Envoyer mes métiers") : null))));
   }
   function pageMetiers(q, voir) {
     const titre = rubrique("metiers").titre;
     setTitre(titre);
-    if (!D) { vue.append(fil(h("span", {}, titre)), enteteRubrique("metiers", rubrique("metiers").desc, encartAddon()), carnetVide()); return; }
+    if (!D) { vue.append(fil(h("span", {}, titre)), enteteRubrique("metiers", rubrique("metiers").desc, encartAddon(), encartEnvoi()), carnetVide()); return; }
     const nouveautes = blocNouveautes("Les dernières nouveautés", 30);
     const nRec = IX.recherche.recettes.length;
     const resume = [pl(D.membres.length, "membre"), `${nRec} recette${nRec > 1 ? "s" : ""} connue${nRec > 1 ? "s" : ""}`, D.maj && quand(D.maj) ? `mis à jour ${quand(D.maj)}` : null].filter(Boolean).join(", ");
@@ -629,7 +639,7 @@
       tries.length > n ? h("button", { type: "button", class: "gd-plus", onclick: () => montrer(tries.length) }, `Voir les ${tries.length} membres`) : null);
     montrer(8);
     vue.append(fil(h("span", {}, titre)),
-      enteteRubrique("metiers", majuscule(resume), encartAddon()),
+      enteteRubrique("metiers", majuscule(resume), encartAddon(), encartEnvoi()),
       h("div", { class: "stack" },
         blocRecherche(q),
         metiers.length ? cadre("Les métiers de la guilde", h("div", { class: "gd-tuiles" }, metiers.map((cle) => {
@@ -1047,6 +1057,8 @@
           h("div", { class: "gd-points" },
             point("Comment les métiers sont mis à jour", h("p", {}, "Chaque exemplaire garde ce que les autres membres lui envoient, et le fait passer aux membres qu'il croise. Celui d'un officier fait le relais : son ordinateur publie le carnet ici. Tes métiers arrivent ainsi sur le site tout seuls, petit à petit, au fil de tes connexions."),
               h("p", {}, "L'addon lit aussi la liste des membres de la guilde, sur place, sans l'envoyer : ceux qui partent disparaissent du site. Il y prend le nom des rangs de la guilde, pour la rubrique Membres.")),
+            point("Apparaître tout de suite", h("p", {}, "Sans attendre le relais : tape ", h("code", {}, "/lbf code"), " en jeu, copie le texte et colle-le dans ",
+              CFG.service ? h("a", { href: "#/metiers/envoyer" }, "Métiers › Envoyer mes métiers") : "Métiers › Envoyer mes métiers", ". C'est toi qui le fais, quand tu veux : l'addon, lui, n'envoie toujours rien sur internet.")),
             point("Il ne ralentit pas le jeu", h("p", {}, "Rien en continu : une lecture quand tu ouvres une fenêtre de métier, et l'envoi de ta fiche à la connexion ou quand tu apprends une recette, en quelques petits messages espacés.")),
             point("Tu restes maître", h("p", {}, "Un bouton rond près de la mini-carte montre que l'addon tourne : au survol, ce qui est partagé et si le partage est actif ; clic droit pour le mettre en pause (l'icône devient grise)."), h("p", {}, h("code", {}, "/lbf pause"), " : plus rien ne part, et ta fiche s'efface chez les autres. ", h("code", {}, "/lbf reprendre"), " relance le partage."),
               h("p", {}, "Pour que tes métiers disparaissent aussi du site, mets l'addon en pause et préviens un officier. Personne n'est obligé de l'installer.")),
@@ -1059,9 +1071,85 @@
           h("dt", {}, h("code", {}, "/lbf")), h("dd", {}, "Ce que l'addon partage, et combien de membres sont dans ton carnet."),
           h("dt", {}, h("code", {}, "/lbf qui <recette>")), h("dd", {}, "Qui sait faire cette recette, en jeu (par exemple : /lbf qui révélation)."),
           h("dt", {}, h("code", {}, "/lbf envoyer")), h("dd", {}, "Renvoyer tes métiers maintenant."),
+          h("dt", {}, h("code", {}, "/lbf code")), h("dd", {}, "Ton code à coller sur le site, rubrique Métiers › Envoyer mes métiers (aussi : Ctrl + clic sur le bouton)."),
           h("dt", {}, h("code", {}, "/lbf pause")), h("dd", {}, "Ne plus rien partager ; les addons des membres connectés effacent ta fiche."),
           h("dt", {}, h("code", {}, "/lbf reprendre")), h("dd", {}, "Relancer le partage."),
           h("dt", {}, h("code", {}, "/lbf bouton")), h("dd", {}, "Cacher ou remettre le bouton de la mini-carte.")))));
+  }
+
+  // Envoyer mes métiers : le code de /lbf code, collé ici, part au relais ; la fiche entre aussitôt dans le carnet affiché
+  function lireCodeColle(brut) {
+    const code = String(brut || "").replace(/\s+/g, "");
+    if (!code) return null;
+    const m = /^LBF1!([^!]+)!([0-9a-f]{16})$/.exec(code);
+    if (!m) return { erreur: code.startsWith("LBF1!") ? "Il manque un morceau : copie tout le texte de la fenêtre." : "Ce n'est pas un code Métiers LBF." };
+    if (m[1].startsWith("X;")) return { code, oubli: true, nom: m[1].slice(2) };
+    const f = ficheDuCode(m[1]);
+    return f && f.metiers.length ? { code, f } : { erreur: "Ce code est abîmé : refais /lbf code et copie tout le texte." };
+  }
+  function pageEnvoyer() {
+    const titre = "Envoyer mes métiers";
+    setTitre(titre);
+    vue.append(filMetiers(h("span", {}, titre)),
+      h("div", { class: "gd-hero gd-hero-petit" }, h("h1", {}, titre), h("div", { class: "gd-separateur", "aria-hidden": "true" }),
+        h("p", { class: "gd-hero-resume" }, "Pour apparaître dans le carnet tout de suite, sans attendre que l'addon fasse passer ta fiche.")));
+    if (!CFG.service) {
+      vue.append(h("div", { class: "stack" }, cadre("Pas encore ouvert", h("div", { class: "gd-vide" },
+        h("p", {}, `L'envoi par le site n'est pas encore en place. En attendant, l'addon ${nomAddonMetiers()} fait arriver tes métiers tout seul, au fil de tes connexions.`)))));
+      return;
+    }
+    const champ = h("textarea", { class: "gd-code-champ", rows: 5, placeholder: "LBF1!…", spellcheck: "false", autocomplete: "off", autocapitalize: "off", "aria-label": "Ton code Métiers LBF" });
+    const apercu = h("div", { class: "gd-code-apercu", "aria-live": "polite" });
+    const bouton = h("button", { type: "button", class: "btn", disabled: true }, "Envoyer");
+    const retour = h("div", { class: "gd-code-retour", role: "status", "aria-live": "polite" });
+    let lu = null;
+    const maj = () => {
+      lu = lireCodeColle(champ.value);
+      fill(retour);
+      bouton.disabled = !lu || !!lu.erreur;
+      bouton.textContent = lu && lu.oubli ? "Effacer ma fiche" : "Envoyer";
+      if (!lu) { fill(apercu); return; }
+      if (lu.erreur) { fill(apercu, h("p", { class: "gd-code-non" }, lu.erreur)); return; }
+      if (lu.oubli) { fill(apercu, h("p", {}, "Ce code ", h("b", {}, "efface"), " la fiche de ", h("b", {}, lu.nom), " (ton addon est en pause).")); return; }
+      const f = lu.f;
+      fill(apercu, h("p", { class: "gd-code-qui" }, h("b", { class: classeCss(f) }, f.nom), ` · ${CLASSES[f.classe] || f.classe || "?"}`),
+        h("ul", { class: "gd-code-metiers" }, f.metiers.map((x) => h("li", {}, icone(iconeMetier(x.cle), "xs"), h("span", {}, nomMetier(x.cle)),
+          h("span", { class: "muted" }, `${x.rang == null ? "?" : x.rang}/${x.max || "?"}${x.recettes.length ? ` · ${pl(x.recettes.length, "recette")}` : ""}`)))));
+    };
+    champ.addEventListener("input", maj);
+    bouton.addEventListener("click", async () => {
+      if (!lu || lu.erreur) return;
+      bouton.disabled = true;
+      fill(retour, h("p", { class: "muted" }, "Envoi…"));
+      let rep = null;
+      try {
+        // text/plain : une requête simple, sans aller-retour préalable du navigateur
+        const r = await fetch(`${CFG.service}/envoyer`, { method: "POST", headers: { "Content-Type": "text/plain;charset=UTF-8" }, body: JSON.stringify({ code: lu.code }) });
+        rep = await r.json().catch(() => null);
+        if (!rep) rep = { ok: false, message: `Le relais a répondu ${r.status}.` };
+      } catch (e) { rep = { ok: false, message: "Le relais ne répond pas : vérifie ta connexion et réessaie dans un instant." }; }
+      bouton.disabled = false;
+      if (!rep.ok) { fill(retour, h("p", { class: "gd-code-non" }, texte(rep.message) || "Refusé.")); return; }
+      const doc = rep.oubli ? { oublis: { [rep.nom]: new Date().toISOString() } } : { fiches: { [rep.nom]: { f: rep.fiche, recu: rep.recu } } };
+      try { if (await fusionnerService(doc)) { lier(); dessinerMenu("metiers", ["envoyer"]); } } catch (e) { /* le carnet affiché attend la prochaine visite */ }
+      const m = !rep.oubli && D ? D.membres.find((x) => x.nom === rep.nom) : null;
+      fill(retour, h("p", { class: "gd-code-oui" }, texte(rep.message) || "C'est fait."),
+        m && m.cle ? h("a", { class: "btn ghost", href: lienMembre(m) }, "Voir ma fiche") : null);
+      if (!rep.oubli) { champ.value = ""; lu = null; fill(apercu); bouton.disabled = true; }
+    });
+    const etape = (n, ...contenu) => h("li", {}, h("span", { class: "gd-code-n" }, n), h("div", {}, contenu));
+    vue.append(h("div", { class: "stack" },
+      cadre("En trois gestes",
+        h("ol", { class: "gd-code-etapes" },
+          etape("1", h("p", {}, "En jeu, tape ", h("code", {}, "/lbf code"), " (ou Ctrl + clic sur le bouton de l'addon, près de la mini-carte).")),
+          etape("2", h("p", {}, "Le code est déjà sélectionné : copie-le avec ", h("kbd", {}, "Ctrl"), " + ", h("kbd", {}, "C"), ".")),
+          etape("3", h("p", {}, "Colle-le ici, puis envoie."))),
+        champ, apercu, h("div", { class: "gd-code-actions" }, bouton), retour),
+      cadre("Ce qui part",
+        h("p", { class: "gd-pourquoi" }, "Exactement ce que l'addon partage déjà avec la guilde : ton nom, ta classe, tes métiers, tes recettes et tes recharges. Rien d'autre."),
+        h("p", { class: "muted small" }, "Le code porte aussi une petite clé tirée au hasard par ton addon et gardée seulement chez toi : elle prouve au site que c'est bien toi. Ton perso doit être dans la liste de la guilde (rubrique Membres). Addon en pause, le code efface ta fiche."),
+        h("div", { class: "gd-docs" }, h("a", { class: "btn ghost", href: "service/worker.js", target: "_blank", rel: "noopener" }, "Lire le code du relais")))));
+    if (SURVOL) setTimeout(() => { try { champ.focus({ preventScroll: true }); } catch (e) { champ.focus(); } }, 0);
   }
 
   function pageIntrouvable(filAriane) {
@@ -1081,13 +1169,13 @@
     },
     metiers: {
       titre: "Métiers", href: "#/metiers",
-      routes: { metiers: (p, q) => pageMetiers(q.get("q") || "", q.get("voir") === "nouveautes"), metier: (p) => (D ? pageMetier(p[0]) : pageMetiers("")), recette: (p) => (D ? pageRecette(p[0]) : pageMetiers("")) },
+      routes: { metiers: (p, q) => (p[0] === "envoyer" ? pageEnvoyer() : pageMetiers(q.get("q") || "", q.get("voir") === "nouveautes")), metier: (p) => (D ? pageMetier(p[0]) : pageMetiers("")), recette: (p) => (D ? pageRecette(p[0]) : pageMetiers("")) },
       compte: () => (D && IX.recherche.recettes.length ? pl(IX.recherche.recettes.length, "recette") : null),
-      sous: (page, p) => (page === "metier" ? p[0] : null),
-      panneau: (sous) => (D ? listeMetiers().map((cle) => {
+      sous: (page, p) => (page === "metier" ? p[0] : page === "metiers" && p[0] === "envoyer" ? "envoyer" : null),
+      panneau: (sous) => [...(D ? listeMetiers().map((cle) => {
         const n = (IX.parMetier.get(cle) || []).length;
         return lienPanneau(`#/metier/${encodeURIComponent(cle)}`, iconeMetier(cle), nomMetier(cle), h("span", { class: "gd-compte", title: pl(n, "membre") }, n), cle === sous);
-      }) : []),
+      }) : []), CFG.service ? lienPanneau("#/metiers/envoyer", ICONE_ENVOI, "Envoyer mes métiers", null, sous === "envoyer") : null].filter(Boolean),
     },
     addons: {
       titre: "Addons", href: "#/addons",
@@ -1121,6 +1209,7 @@
       rubriques: (s && Array.isArray(s.rubriques) ? s.rubriques : []).filter((r) => texte(r && r.titre) && bon(r))
         .map((r) => ({ id: r.id, titre: texte(r.titre), icone: texte(r.icone), desc: texte(r.desc) })),
       addons: [],
+      service: typeof (s && s.service) === "string" && /^(https:\/\/[\w.-]+|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)(\/[\w.-]*)*$/.test(s.service.trim()) ? s.service.trim().replace(/\/+$/, "") : null,
     };
     vus.clear();
     CFG.addons = (s && Array.isArray(s.addons) ? s.addons : []).filter((a) => texte(a && a.nom) && bon(a))
@@ -1133,6 +1222,70 @@
       armurerie: texte(p.armurerie) }));
     R = { membres: M, rangs: d && d.rangs && typeof d.rangs === "object" && !Array.isArray(d.rangs) ? d.rangs : {}, maj: d && d.maj };
   }
+  // Une fiche au format de l'addon, telle que le relais la garde : « 1;nom;CLASSE;;maj;métiers;recharges;version » (nombres en base 36)
+  const b36 = (s) => (/^[0-9a-z]{1,8}$/.test(s || "") ? parseInt(s, 36) : null);
+  const isoDe = (t) => (t ? new Date(t * 1000).toISOString() : null);
+  function ficheDuCode(f, recu) {
+    const c = String(f || "").split(";");
+    if (c.length < 8 || c[0] !== "1" || !texte(c[1])) return null;
+    const metiers = [];
+    for (const b of (c[5] || "").split("/")) {
+      const x = /^([0-9a-z]+):(\d+):(\d+):([0-9a-z.]*)$/.exec(b);
+      const cle = x && LIGNES[b36(x[1])];
+      if (cle) metiers.push({ cle, rang: Number(x[2]) || null, max: Number(x[3]) || null, recettes: x[4].split(".").map(b36).filter(Boolean).map(String) });
+    }
+    const recharges = {};
+    for (const v of (c[6] || "").split(",")) {
+      const x = /^([0-9a-z]+):([0-9a-z]+)$/.exec(v);
+      if (x && b36(x[1]) && b36(x[2]) * 1000 > Date.now()) recharges[String(b36(x[1]))] = isoDe(b36(x[2]));
+    }
+    const maj = isoDe(b36(c[4]));
+    return { nom: c[1], classe: (c[2] || "").toLowerCase() || null, maj, vu: texte(recu) || maj, version: texte(c[7]), metiers, recharges };
+  }
+  // Les fiches du relais plus récentes que le carnet (guilde.json) passent devant ; une fiche effacée par son membre (code en pause) disparaît.
+  // Une recette que guilde.json ne connaît pas encore vient du catalogue (toutes les recettes), lu seulement dans ce cas.
+  async function fusionnerService(doc) {
+    const brutes = doc && doc.fiches && typeof doc.fiches === "object" ? doc.fiches : {};
+    const oublis = doc && doc.oublis && typeof doc.oublis === "object" ? doc.oublis : {};
+    const roster = R && R.membres.length ? new Set(R.membres.map((p) => plat(p.nom))) : null;
+    const base = D ? D.membres : [];
+    const parNom = new Map(base.map((m) => [m.nom, m]));
+    const neuves = [];
+    for (const [nom, x] of Object.entries(brutes)) {
+      const f = x && typeof x === "object" ? ficheDuCode(x.f, x.recu) : null;
+      if (!f || f.nom !== nom || !f.metiers.length || (roster && !roster.has(plat(nom)))) continue;
+      const a = parNom.get(nom);
+      if (!a || (dateDe(f.maj) || 0) > (dateDe(a.maj) || 0)) neuves.push(f);
+    }
+    const oublies = new Set(Object.keys(oublis).filter((nom) => !neuves.some((f) => f.nom === nom) && parNom.has(nom)
+      && (dateDe(parNom.get(nom).maj) || 0) <= (dateDe(oublis[nom]) || 0)));
+    if (!neuves.length && !oublies.size) return false;
+    const membres = base.filter((m) => !oublies.has(m.nom) && !neuves.some((f) => f.nom === m.nom)).concat(neuves);
+    const recettes = { ...(D ? D.recettes : {}) }, composants = { ...(D ? D.composants : {}) }, metiers = { ...(D ? D.metiers : {}) };
+    if (neuves.some((f) => f.metiers.some((x) => x.recettes.some((id) => !recettes[id])))) {
+      let cat = null;
+      try { cat = await lire(FICHIERS.catalogue); } catch (e) { /* sans catalogue, ces recettes attendent la prochaine publication */ }
+      if (cat && cat.recettes && typeof cat.recettes === "object") {
+        const sues = new Set(membres.flatMap((m) => (m.metiers || []).flatMap((x) => (x.recettes || []).map(String))));
+        for (const id of sues) {
+          if (recettes[id] || !cat.recettes[id]) continue;
+          recettes[id] = cat.recettes[id];
+          for (const [cid] of cat.recettes[id].co || []) if (!composants[cid] && cat.composants && cat.composants[cid]) composants[cid] = cat.composants[cid];
+        }
+        for (const [cle, mt] of Object.entries(cat.metiers || {})) {
+          if (!mt || !membres.some((m) => (m.metiers || []).some((x) => x.cle === cle))) continue;
+          const cats = (mt.categories || []).map((c) => ({ nom: c.nom, recettes: (c.recettes || []).filter((id) => sues.has(String(id))) })).filter((c) => c.recettes.length);
+          if (cats.length) metiers[cle] = { ...mt, categories: cats };
+        }
+      }
+    }
+    for (const cle of Object.keys(metiers)) if (!membres.some((m) => (m.metiers || []).some((x) => x.cle === cle))) delete metiers[cle];
+    const recu = neuves.map((f) => f.vu).filter(Boolean).sort().pop();
+    preparer({ ...(D || {}), maj: [D && D.maj, recu].filter(Boolean).sort().pop() || null, membres, recettes, composants, metiers, historique: D ? D.historique : [] });
+    ERREUR = null;
+    return true;
+  }
+
   // Relie un membre de guilde.json à sa fiche de l'armurerie (même nom, même classe) et donne à chacun sa clé d'adresse :
   // le nom, ou nom-surnom quand plusieurs membres de l'armurerie portent le même nom
   function lier() {
@@ -1191,7 +1344,10 @@
   async function demarrer() {
     vue.append(h("p", { class: "gd-chargement" }, "Ouverture des registres de la guilde…"));
     const panne = () => (location.protocol === "file:" ? "fichier" : "lecture");
-    const [s, mb, mt, rg] = await Promise.allSettled([lire(FICHIERS.site), lire(FICHIERS.membres), lire(FICHIERS.metiers), lire(FICHIERS.rangs)]);
+    const pSite = lire(FICHIERS.site);
+    // Le relais des codes, dès que site.json donne son adresse ; 4 s au plus, le site s'ouvre sans lui
+    const pRelais = pSite.then((x) => { lireSite(x); return CFG.service ? Promise.race([lire(`${CFG.service}/fiches`), new Promise((ok) => setTimeout(() => ok(null), 4000))]) : null; });
+    const [s, mb, mt, rg, rl] = await Promise.allSettled([pSite, lire(FICHIERS.membres), lire(FICHIERS.metiers), lire(FICHIERS.rangs), pRelais]);
     lireSite(s.status === "fulfilled" ? s.value : null);
     try { if (mb.status === "fulfilled") lireMembres(mb.value); else ERREUR_R = panne(); } catch (e) { R = null; ERREUR_R = "lecture"; }
     // Les noms des rangs : data/rangs.json (lus en jeu par l'addon d'un officier), à part de la liste que GitHub relit sur l'armurerie
@@ -1206,6 +1362,7 @@
     } else ERREUR = panne();
     // Sans site.json lisible, l'addon des métiers reste au menu (d'après data/guilde.json)
     if (s.status !== "fulfilled" && ADDON) CFG.addons = [{ id: ADDON_METIERS, nom: texte(ADDON.nom) || NOM_ADDON_METIERS }];
+    if (rl.status === "fulfilled" && rl.value && ERREUR !== "lecture") { try { await fusionnerService(rl.value); } catch (e) { /* le carnet reste tel quel */ } }
     lier();
     router();
     window.addEventListener("hashchange", () => {
