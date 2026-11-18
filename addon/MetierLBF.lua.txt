@@ -52,7 +52,7 @@ local function split(s, sep)
 end
 local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
-local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.4.1"
+local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.5.0"
 
 local function plusRecente(a, b)
 	local x, y = split(a or "0", "."), split(b or "0", ".")
@@ -185,7 +185,7 @@ local function lireRecharges()
 end
 
 -- Liste des membres de la guilde : lue sur place, jamais envoyée. Sert à oublier ceux qui sont partis.
-local dernierRoster = 0
+local dernierRoster, guildeNoms, rosterComplet = 0, {}, nil
 local function lireRoster()
 	if not enGuilde() or now() - dernierRoster < 60 then return end
 	local n = nombre(sur(GetNumGuildMembers)) or 0
@@ -194,13 +194,13 @@ local function lireRoster()
 	for i = 1, n do
 		local brut, rangNom, rangIdx = sur(GetGuildRosterInfo, i)
 		local nom = court(texte(brut))
-		if nom then noms[nom] = true; liste[#liste + 1] = nom end
+		if nom then noms[nom] = true; liste[#liste + 1] = nom; guildeNoms[nom] = true end
 		if nombre(rangIdx) and texte(rangNom) then rangs[rangIdx] = texte(rangNom) end
 	end
 	-- liste incomplète (membres hors ligne absents) : on ne retire personne
 	local nous = moi()
 	if #liste < n or not nous or not noms[nous] then return end
-	dernierRoster = now()
+	dernierRoster, rosterComplet = now(), noms
 	local d = db()
 	d.guilde = texte((sur(GetGuildInfo, "player"))) or d.guilde
 	d.roster, d.rosterMaj, d.rangs = liste, now(), rangs
@@ -265,19 +265,21 @@ end
 
 local file, dernierEnvoi, envoiPrevu, suite, enCours = {}, 0, nil, 0, false
 
-local function envoyerBrut(msg)
+-- à toute la guilde, ou en privé à un seul membre (bouche-à-oreille)
+local function envoyerBrut(msg, cible)
 	if not enGuilde() then return end
+	local canal = cible and "WHISPER" or "GUILD"
 	if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-		sur(C_ChatInfo.SendAddonMessage, PREFIXE, msg, "GUILD")
+		sur(C_ChatInfo.SendAddonMessage, PREFIXE, msg, canal, cible)
 	elseif SendAddonMessage then
-		sur(SendAddonMessage, PREFIXE, msg, "GUILD")
+		sur(SendAddonMessage, PREFIXE, msg, canal, cible)
 	end
 end
 
 local function viderFile()
-	local msg = table.remove(file, 1)
-	if msg then
-		envoyerBrut(msg)
+	local it = table.remove(file, 1)
+	if it then
+		envoyerBrut(it.m, it.cible)
 		C_Timer.After(PAUSE, viderFile)
 	else
 		enCours = false
@@ -286,8 +288,9 @@ end
 local function lancerFile()
 	if not enCours and #file > 0 then enCours = true; viderFile() end
 end
+local function ajouter(msg, cible) file[#file + 1] = { m = msg, cible = cible } end
 
-local function serialiser(nom, m)
+local function serialiser(nom, m, version)
 	local parts = {}
 	for ligne, x in pairs(m.metiers or {}) do
 		local ids = {}
@@ -298,7 +301,7 @@ local function serialiser(nom, m)
 	for id, fin in pairs(m.recharges or {}) do
 		if fin > t then rech[#rech + 1] = b36(id) .. ":" .. b36(fin) end
 	end
-	return table.concat({ PROTOCOLE, nom, m.classe or "", "", b36(m.maj or t), table.concat(parts, "/"), table.concat(rech, ","), VERSION }, ";")
+	return table.concat({ PROTOCOLE, nom, m.classe or "", "", b36(m.maj or t), table.concat(parts, "/"), table.concat(rech, ","), version or "" }, ";")
 end
 
 -- découpe sans couper une lettre accentuée en deux
@@ -317,6 +320,13 @@ local function morceaux(s)
 	return t
 end
 
+local function envoyerMorceaux(genre, payload, cible)
+	local p = morceaux(payload)
+	suite = (suite % 1295) + 1
+	for i, x in ipairs(p) do ajouter(genre .. b36(suite) .. ":" .. i .. ":" .. #p .. ":" .. x, cible) end
+	lancerFile()
+end
+
 local function envoyerFiche()
 	envoiPrevu = nil
 	local m, nom = maFiche()
@@ -324,12 +334,9 @@ local function envoyerFiche()
 	lireRangs()
 	lireRecharges()
 	if compter(m.metiers) == 0 then return end
-	local p = morceaux(serialiser(nom, m))
-	suite = (suite % 1295) + 1
-	for i, x in ipairs(p) do file[#file + 1] = "D" .. b36(suite) .. ":" .. i .. ":" .. #p .. ":" .. x end
+	envoyerMorceaux("D", serialiser(nom, m, VERSION))
 	dernierEnvoi = now()
 	db().envoi = dernierEnvoi
-	lancerFile()
 end
 
 planifierEnvoi = function(delai, force)
@@ -342,16 +349,54 @@ planifierEnvoi = function(delai, force)
 	end)
 end
 
+-- Bouche-à-oreille : à un membre qui arrive, la liste « qui j'ai, de quand » ; il demande ce qui lui manque, on le lui envoie en privé
+local resumes, envoyees, demandes = {}, {}, {}
+
+local function envoyerResume(cible)
+	local k = court(cible)
+	if enPause() or not k or (resumes[k] and now() - resumes[k] < 600) then return end
+	resumes[k] = now()
+	local L = {}
+	for nom, m in pairs(db().membres) do
+		if nom ~= k and type(m) == "table" and m.maj and compter(m.metiers) > 0 then L[#L + 1] = nom .. ":" .. b36(m.maj) end
+	end
+	if #L > 0 then envoyerMorceaux("S", table.concat(L, ","), cible) end
+end
+
+local function envoyerFichesA(noms, cible)
+	local d, k, n = db(), court(cible), 0
+	if enPause() or not k then return end
+	for _, nom in ipairs(noms) do
+		local m, cle = d.membres[nom], k .. "#" .. nom
+		if n < 40 and type(m) == "table" and compter(m.metiers) > 0 and not (envoyees[cle] and now() - envoyees[cle] < 600) then
+			envoyees[cle] = now()
+			n = n + 1
+			envoyerMorceaux("R", serialiser(nom, m, nom == moi() and VERSION or m.version), cible)
+		end
+	end
+end
+
 ---------------------------------------------------------------- réception
 
 local recus = {}
 
-local function lireFiche(payload, qui)
+local function estMembre(nom) return nom and (guildeNoms[nom] or db().membres[nom] ~= nil) end
+
+-- relaye : la fiche d'un autre membre, transmise par celui qui l'a reçue
+local function lireFiche(payload, qui, relaye)
 	local c = split(payload, ";")
-	if c[1] ~= PROTOCOLE or court(c[2]) ~= qui then return end
+	if c[1] ~= PROTOCOLE then return end
+	local nom = court(c[2])
+	if not nom or nom == moi() then return end
+	if relaye then
+		if rosterComplet and not rosterComplet[nom] then return end
+		qui = nom
+	elseif nom ~= qui then
+		return
+	end
 	local d = db()
 	if not d.membres[qui] and compter(d.membres) >= MAX_MEMBRES then return end
-	local f = { classe = texte(c[3]), maj = d36(c[5]), vu = now(), metiers = {}, recharges = {}, version = texte(c[8]) }
+	local f = { classe = texte(c[3]), maj = d36(c[5]), vu = not relaye and now() or nil, metiers = {}, recharges = {}, version = texte(c[8]) }
 	verifierVersion(f.version)
 	for _, bloc in ipairs(split(c[6] or "", "/")) do
 		local l, rang, max, ids = bloc:match("^(%w+):(%d+):(%d+):(.*)$")
@@ -370,33 +415,70 @@ local function lireFiche(payload, qui)
 		if d36(id) and d36(t) then f.recharges[d36(id)] = d36(t) end
 	end
 	local ancien = d.membres[qui]
-	if type(ancien) ~= "table" or (f.maj or 0) >= (ancien.maj or 0) then
+	local plusNeuve = type(ancien) ~= "table" or (f.maj or 0) > (ancien.maj or 0) or (not relaye and (f.maj or 0) == (ancien.maj or 0))
+	if plusNeuve then
+		if relaye and type(ancien) == "table" then f.vu = ancien.vu end
 		d.membres[qui] = f
-	else
+	elseif not relaye then
 		ancien.vu = f.vu
 	end
 end
 
+local function lireResume(payload, cible)
+	local veux = {}
+	for e in string.gmatch(payload, "[^,]+") do
+		local nom, maj = e:match("^(.+):(%w+)$")
+		maj = d36(maj)
+		if nom and maj and nom ~= moi() and (not rosterComplet or rosterComplet[nom]) then
+			local m = db().membres[nom]
+			if (type(m) ~= "table" or (m.maj or 0) < maj) and not (demandes[nom] and now() - demandes[nom] < 120) then
+				demandes[nom] = now()
+				veux[#veux + 1] = nom
+			end
+		end
+	end
+	local ligne = ""
+	for _, nom in ipairs(veux) do
+		if #ligne + #nom > 230 then ajouter("W:" .. ligne, cible); ligne = "" end
+		ligne = ligne == "" and nom or (ligne .. "," .. nom)
+	end
+	if ligne ~= "" then ajouter("W:" .. ligne, cible) end
+	lancerFile()
+end
+
 local function recevoir(prefixe, msg, canal, expediteur)
-	if prefixe ~= PREFIXE or canal ~= "GUILD" or type(msg) ~= "string" then return end
+	if prefixe ~= PREFIXE or type(msg) ~= "string" or (canal ~= "GUILD" and canal ~= "WHISPER") then return end
 	local qui = court(expediteur)
 	if not qui or qui == moi() then return end
+	-- en privé, seulement un membre de la guilde
+	if canal == "WHISPER" and not estMembre(qui) then return end
 	if msg == "X" then db().membres[qui] = nil; return end
 	if msg == "Q" or msg:sub(1, 2) == "Q:" then
 		verifierVersion(texte(msg:sub(3)))
-		if not enPause() then planifierEnvoi(math.random(3, 25)) end
+		if not enPause() then
+			planifierEnvoi(math.random(3, 25))
+			C_Timer.After(math.random(5, 30), function() envoyerResume(expediteur) end)
+		end
 		return
 	end
-	local s, i, n, x = msg:match("^D(%w+):(%d+):(%d+):(.*)$")
+	if msg:sub(1, 2) == "W:" then
+		if canal == "WHISPER" then envoyerFichesA(split(msg:sub(3), ","), expediteur) end
+		return
+	end
+	local genre, s, i, n, x = msg:match("^([DSR])(%w+):(%d+):(%d+):(.*)$")
 	i, n = tonumber(i), tonumber(n)
-	if not s or not i or not n or n < 1 or n > 60 or i > n then return end
-	local cle = qui .. "#" .. s
+	if not genre or not i or not n or n < 1 or n > 60 or i > n then return end
+	if genre ~= "D" and canal ~= "WHISPER" then return end
+	local cle = qui .. "#" .. genre .. s
 	local r = recus[cle]
 	if not r then r = { n = n, parts = {}, recu = 0, quand = now() }; recus[cle] = r end
 	if not r.parts[i] then r.parts[i] = x; r.recu = r.recu + 1 end
 	if r.recu >= r.n then
 		recus[cle] = nil
-		pcall(lireFiche, table.concat(r.parts), qui)
+		local payload = table.concat(r.parts)
+		if genre == "D" then pcall(lireFiche, payload, qui, false)
+		elseif genre == "R" then pcall(lireFiche, payload, qui, true)
+		else pcall(lireResume, payload, expediteur) end
 	end
 	for k, v in pairs(recus) do
 		if now() - v.quand > 120 then recus[k] = nil end
@@ -684,7 +766,7 @@ f:SetScript("OnEvent", function(_, ev, a1, a2, a3, a4)
 		C_Timer.After(10, function()
 			if C_GuildInfo and C_GuildInfo.GuildRoster then sur(C_GuildInfo.GuildRoster) elseif GuildRoster then sur(GuildRoster) end
 		end)
-		C_Timer.After(15, function() file[#file + 1] = "Q:" .. VERSION; lancerFile() end)
+		C_Timer.After(15, function() ajouter("Q:" .. VERSION); lancerFile() end)
 		planifierEnvoi(math.random(25, 45), true)
 	elseif ev == "GUILD_ROSTER_UPDATE" then
 		pcall(lireRoster)
