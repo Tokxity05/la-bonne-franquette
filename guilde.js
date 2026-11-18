@@ -13,6 +13,7 @@
      #/membre/<clé>[/<métier>[/<recette>]]   un membre : son profil, puis sa fenêtre de métier s'il partage ses métiers (clé = nom, nom-surnom si deux membres portent le même nom)
      #/metiers[?q=…]             la rubrique Métiers : « Qui sait faire… ? », les métiers, les nouveautés, les derniers membres vus
      #/metiers/envoyer           coller son code (/lbf code) pour apparaître tout de suite
+     #/metiers/emplacement/<clé> ce que la guilde sait faire pour un emplacement (tête, torse, armes…) : pièces et enchantements
      #/metier/<clé>              un métier : ses recettes dans la guilde, ses membres
      #/recette/<id>              une recette et qui sait la faire
      #/addons                    les addons de la guilde
@@ -198,13 +199,16 @@
     D.metiers = d.metiers && typeof d.metiers === "object" ? d.metiers : {};
     D.recettes = d.recettes && typeof d.recettes === "object" ? d.recettes : {};
     D.composants = d.composants && typeof d.composants === "object" ? d.composants : {};
+    D.specialites = d.specialites && typeof d.specialites === "object" ? d.specialites : {};
     D.membres = (Array.isArray(d.membres) ? d.membres : []).filter((m) => m && typeof m.nom === "string" && m.nom);
     IX.quiSait = new Map();       // recette -> [{ m, x }]
     IX.parMetier = new Map();     // métier -> [{ m, x }], meilleur rang d'abord
     IX.categorie = new Map();     // recette -> { cle, nom }
+    IX.emplacements = null;       // emplacement -> [recettes] (989), bâti au premier usage
     IX.dansRecettes = new Map();  // composant -> [recettes]
     for (const m of D.membres) {
       m.metiers = (Array.isArray(m.metiers) ? m.metiers : []).filter((x) => x && typeof x.cle === "string");
+      m.spes = (Array.isArray(m.spes) ? m.spes : []).map(String).filter((s) => D.specialites[s]);
       for (const x of m.metiers) {
         x.recettes = (Array.isArray(x.recettes) ? x.recettes : []).map(String);
         pousser(IX.parMetier, x.cle, { m, x });
@@ -243,6 +247,9 @@
     for (const c of [...ORDRE, ...IX.parMetier.keys()]) if (!L.includes(c) && IX.parMetier.has(c)) L.push(c);
     return L;
   }
+  // 996 · Les spécialisations d'un membre dans un métier (ingénieur gnome, fabricant d'armes…)
+  const spesDe = (m, cle) => (m.spes || []).filter((s) => (D.specialites[s] || {}).m === cle).map((s) => D.specialites[s].n);
+  const pastilleSpe = (m, cle) => { const L = spesDe(m, cle); return L.length ? h("span", { class: "gd-spe", title: "Spécialisation" }, L.join(" · ")) : null; };
   const idsDuMetier = (cle) => [...new Set(((D.metiers[cle] || {}).categories || []).flatMap((c) => (c.recettes || []).map(String)))].filter((id) => D.recettes[id] && IX.quiSait.has(id));
   const avecRecettes = (x) => x.recettes.some((id) => D.recettes[id]);
 
@@ -350,6 +357,7 @@
       h("div", { class: "lv-tete" }, h("span", { class: "lv-rond" }, lienWh(t, n, icone(r.i, "lg"))),
         h("div", { class: "lv-tete-txt" }, h(titre, { class: "lv-nom" }, lienWh(t, n, r.n || `Recette ${id}`, `q-${couleurNom(r)}`)), sous ? h("div", { class: "lv-sous" }, majuscule(sous)) : null)),
       r.e ? h("p", { class: "lv-desc" }, r.e) : r.k === "spell" ? null : h("p", { class: "lv-desc" }, `Crée : ${r.n}.`),
+      r.sp ? h("p", { class: "lv-spe-req" }, (D.specialites[String(r.sp)] || {}).n ? ["Demande la spécialisation ", h("b", {}, D.specialites[String(r.sp)].n), "."] : "Demande une spécialisation de métier.") : null,
       stats.length ? h("ul", { class: "lv-stats" }, stats.map(([txt, cls]) => h("li", { class: cls }, txt))) : null,
       co.length ? [h("div", { class: "lv-or" }, "Composants"), h("div", { class: "lv-comps" }, co.map(([cid, q]) => {
         const c = D.composants[String(cid)] || {};
@@ -605,7 +613,7 @@
     if (SURVOL) setTimeout(() => { try { champ.focus({ preventScroll: true }); } catch (e) { champ.focus(); } }, 0);
     return h("section", { class: "frame titre gd-recherche" }, h("h2", { class: "frame-title" }, "Qui sait faire… ?"),
       h("p", { class: "muted small", style: { margin: "0 0 8px" } },"Le nom d'une recette, d'un composant ou d'un membre, sans te soucier des accents."),
-      champ, resultats);
+      champ, D ? h("div", { class: "gd-empl-tete" }, h("span", { class: "gd-empl-titre" }, "Ou par emplacement"), rangeeEmplacements(null)) : null, resultats);
   }
   // L'encart de l'addon des métiers : son nom, sa version, le lien vers sa page
   function encartAddon() {
@@ -625,6 +633,84 @@
       h("div", { class: "gd-docs" }, h("a", { class: "btn", href: lienAddon(ADDON_METIERS) }, "Télécharger l'addon"),
         CFG.service ? h("a", { class: "btn ghost", href: "#/metiers/envoyer" }, "Envoyer mes métiers") : null))));
   }
+  // 989 · Par emplacement : les pièces que la guilde sait fabriquer et ce qu'elle sait poser dessus (enchantements, renforts, lunettes)
+  const EMPLACEMENTS_GUILDE = [["tete", "Tête", "inv_helmet_47"], ["cou", "Cou", "inv_jewelry_amulet_07"], ["epaules", "Épaules", "inv_shoulder_23"],
+    ["dos", "Dos", "inv_misc_cape_02"], ["torse", "Torse", "inv_chest_chain_09"], ["poignets", "Poignets", "inv_bracer_07"], ["mains", "Mains", "inv_gauntlets_05"],
+    ["taille", "Taille", "inv_belt_06"], ["jambes", "Jambes", "inv_pants_06"], ["pieds", "Pieds", "inv_boots_05"], ["bijou", "Bijou", "inv_misc_enggizmos_02"],
+    ["armes", "Armes", "inv_weapon_shortblade_05"], ["main-gauche", "Main gauche", "inv_shield_22"], ["relique", "Relique", "inv_relics_libramofhope"],
+    ["sacs", "Sacs", "inv_misc_bag_10_red"]];
+  const SLOT_EMPLACEMENT = { Head: "tete", Neck: "cou", Shoulder: "epaules", Back: "dos", Cloak: "dos", Chest: "torse", Robe: "torse", Wrist: "poignets", Hands: "mains",
+    Waist: "taille", Legs: "jambes", Feet: "pieds", Trinket: "bijou", "Main Hand": "armes", "One-Hand": "armes", "Two-Hand": "armes", Ranged: "armes", Thrown: "armes",
+    "Off Hand": "main-gauche", "Held In Off-hand": "main-gauche", Shield: "main-gauche", Relic: "relique", Bag: "sacs" };
+  // Sans emplacement relevé : la catégorie de la fenêtre de métier (sans accents ni majuscules) ; les huiles et les pierres, temporaires, n'y sont pas
+  const CATEGORIE_EMPLACEMENT = [[/^enchantements de torse/, ["torse"]], [/^enchantements de brassards/, ["poignets"]], [/^enchantements de gants/, ["mains"]],
+    [/^enchantements de bottes/, ["pieds"]], [/^enchantements d.arme/, ["armes"]], [/^enchantements (de bouclier|d.objet en main gauche)/, ["main-gauche"]],
+    [/^enchantements d.amulette/, ["cou"]], [/^enchantements de cape/, ["dos"]], [/^lunettes de visee/, ["armes"]], [/^renforts d.armure/, ["torse", "mains", "jambes", "pieds"]],
+    [/^(sacs|carquois|gibernes)/, ["sacs"]], [/^(casques|chaperons|couvre-chefs)/, ["tete"]], [/^(espauliers|spallieres)/, ["epaules"]], [/^capes/, ["dos"]],
+    [/^(corselets|robes)/, ["torse"]], [/^brassards/, ["poignets"]], [/^(gantelets|gants)/, ["mains"]], [/^ceintures/, ["taille"]], [/^(garde-jambes|jambieres)/, ["jambes"]],
+    [/^(bottes|chaussures)/, ["pieds"]]];
+  // Ce qui se pose sur une pièce (enchantement, renfort, lunette), à part des pièces elles-mêmes
+  const POSE = /^(enchantements|renforts d.armure|lunettes de visee)/;
+  function emplacementsDe(id) {
+    const r = D.recettes[id];
+    if (!r) return [];
+    if (r.k !== "spell" && SLOT_EMPLACEMENT[r.slot]) return [SLOT_EMPLACEMENT[r.slot]];
+    const c = plat((IX.categorie.get(id) || {}).nom);
+    const x = CATEGORIE_EMPLACEMENT.find(([re]) => re.test(c));
+    return x ? x[1] : [];
+  }
+  function indexEmplacements() {
+    if (IX.emplacements) return IX.emplacements;
+    IX.emplacements = new Map();
+    for (const id of IX.quiSait.keys()) for (const e of emplacementsDe(id)) pousser(IX.emplacements, e, id);
+    return IX.emplacements;
+  }
+  // La rangée des emplacements où la guilde sait faire quelque chose (sous « Qui sait faire… ? » et en tête de la page)
+  function rangeeEmplacements(actif) {
+    const ix = indexEmplacements();
+    const L = EMPLACEMENTS_GUILDE.filter(([cle]) => ix.has(cle));
+    return L.length ? h("nav", { class: "gd-empl", "aria-label": "Par emplacement" }, L.map(([cle, nom, ic]) => h("a", {
+      class: `gd-empl-lien${cle === actif ? " actif" : ""}`, href: `#/metiers/emplacement/${cle}`, "aria-current": cle === actif ? "page" : null, title: pl(ix.get(cle).length, "recette") },
+      icone(ic, "sm"), h("span", {}, nom)))) : null;
+  }
+  // Une ligne : la recette, ce qu'elle donne (stats ou effet), qui sait la faire
+  function statsCourtes(r) {
+    if (r.k === "spell" || !r.st) return r.e || "";
+    return STATS.filter(([k]) => r.st[k] != null).map(([k, f]) => f(r.st[k]).replace(/^Équipé : /, "")).join(", ");
+  }
+  function resEmplacement(id) {
+    const r = D.recettes[id], qui = IX.quiSait.get(id) || [], cat = IX.categorie.get(id);
+    const sous = [nomMetier(r.m), cat && r.k !== "spell" ? cat.nom : null, r.req ? `niveau ${r.req}` : null].filter(Boolean).join(" · ");
+    const effet = statsCourtes(r);
+    return lienRecette(id, [icone(r.i, "sm", r.k === "spell" ? null : r.q),
+      h("span", { class: "gd-res-txt" }, h("span", { class: "gd-res-ligne" }, h("span", { class: `gd-res-nom q-${couleurNom(r)}` }, r.n), pastille(id)),
+        effet ? h("span", { class: "gd-res-effet" }, effet) : null, h("span", { class: "gd-res-sous" }, sous)),
+      h("span", { class: "gd-res-qui" }, nomsQui(qui))], "gd-res");
+  }
+  function pageEmplacement(cle) {
+    const ix = indexEmplacements();
+    const def = EMPLACEMENTS_GUILDE.find(([c]) => c === cle) || EMPLACEMENTS_GUILDE.find(([c]) => ix.has(c));
+    const titre = "Par emplacement";
+    setTitre(def ? `${def[1]} · ${titre}` : titre);
+    if (!def || !ix.has(def[0])) {
+      vue.append(filMetiers(h("span", {}, titre)), cadre(titre, h("div", { class: "gd-vide" }, h("p", {}, "La guilde ne sait encore rien fabriquer pour cet emplacement."),
+        h("a", { class: "btn", href: "#/metiers" }, "Retour aux métiers"))));
+      return;
+    }
+    const ids = ix.get(def[0]);
+    const pose = ids.filter((id) => POSE.test(plat((IX.categorie.get(id) || {}).nom)));
+    const pieces = ids.filter((id) => !pose.includes(id));
+    const parNiveau = (a, b) => (D.recettes[b].req || 0) - (D.recettes[a].req || 0) || (D.recettes[b].ilvl || 0) - (D.recettes[a].ilvl || 0) || (D.recettes[b].s || 0) - (D.recettes[a].s || 0)
+      || D.recettes[a].n.localeCompare(D.recettes[b].n, "fr");
+    vue.append(filMetiers(h("a", { href: "#/metiers/emplacement" }, titre), h("span", {}, def[1])),
+      h("section", { class: "frame gd-entete" }, h("div", { class: "gd-tete-metier" }, icone(def[2], "xl"),
+        h("div", {}, h("h1", {}, def[1]), h("p", {}, [pieces.length ? pl(pieces.length, "pièce") : null, pose.length ? pl(pose.length, "amélioration") : null].filter(Boolean).join(" · ")
+          + " que la guilde sait faire"))), rangeeEmplacements(def[0])),
+      h("div", { class: "stack" },
+        pose.length ? cadre(`À poser dessus (${pose.length})`, h("div", { class: "gd-res-liste" }, pose.sort(parNiveau).map(resEmplacement))) : null,
+        pieces.length ? cadre(`Les pièces (${pieces.length})`, h("div", { class: "gd-res-liste" }, pieces.sort(parNiveau).map(resEmplacement))) : null));
+  }
+
   // Les recettes à recharge de la guilde (étoffe lunaire, transmutations…) : qui peut les lancer aujourd'hui, les prêtes d'abord
   function blocRecharges() {
     const L = [];
@@ -780,7 +866,7 @@
           const st = r.cd ? etatRecharge(m, id) : null;
           return h("a", { class: "gd-qui", href: lienMembre(m, x.cle, id) },
             h("span", { class: "gd-qui-id" }, h("span", { class: `gd-membre-nom ${classeCss(m)}` }, m.nom), h("span", { class: "gd-membre-sous" }, identite(m))),
-            barreRang(x, `${nomMetier(x.cle)} : ${x.rang == null ? "?" : x.rang}/${x.max || "?"}`),
+            pastilleSpe(m, x.cle), barreRang(x, `${nomMetier(x.cle)} : ${x.rang == null ? "?" : x.rang}/${x.max || "?"}`),
             st ? h("span", { class: `gd-recharge${st.pret ? " pret" : ""}`, title: st.titre }, st.texte) : null,
             h("span", { class: "gd-membre-vu" }, vu(m)));
         })) : h("p", { class: "muted center" }, "Plus personne ne la connaît dans le carnet."))));
@@ -913,7 +999,7 @@
       fill(fenetre,
         // L'en-tête : le métier, sa barre de compétence (fine), puis un onglet par métier
         h("div", { class: "lv-entete" }, h("span", { class: "lv-portrait" }, icone(iconeMetier(x.cle), "lg")),
-          h("div", { class: "lv-entete-txt" }, h("h2", { class: "lv-titre-nom" }, nomMetier(x.cle)),
+          h("div", { class: "lv-entete-txt" }, h("h2", { class: "lv-titre-nom" }, nomMetier(x.cle), spesDe(m, x.cle).length ? h("span", { class: "lv-titre-spe" }, spesDe(m, x.cle).join(" · ")) : null),
             x.rang != null ? h("div", { class: "lv-niveau" },
               h("span", { class: "lv-barre", role: "progressbar", "aria-label": `Compétence en ${nomMetier(x.cle)}`, "aria-valuemin": 0, "aria-valuemax": x.max || 300, "aria-valuenow": x.rang },
                 h("span", { class: "lv-barre-plein", style: { width: `${Math.max(0, Math.min(100, (x.rang / (x.max || 300)) * 100))}%` } })),
@@ -989,7 +1075,7 @@
       const n = x.recettes.filter((id) => D.recettes[id]).length;
       return h("a", { class: "gd-qui", href: avecRecettes(x) ? lienMembre(m, x.cle) : lienMembre(m) },
         h("span", { class: "gd-qui-id" }, h("span", { class: `gd-membre-nom ${classeCss(m)}` }, m.nom), h("span", { class: "gd-membre-sous" }, [identite(m), vu(m)].filter(Boolean).join(" · "))),
-        barreRang(x), n ? h("span", { class: "gd-nbrec" }, pl(n, "recette")) : null);
+        pastilleSpe(m, cle), barreRang(x), n ? h("span", { class: "gd-nbrec" }, pl(n, "recette")) : null);
     })));
     blocMembres.classList.add("gd-metier-membres");
     vue.append(filMetiers(h("span", {}, nomMetier(cle))),
@@ -1065,7 +1151,7 @@
           h("p", { class: "gd-pourquoi" }, h("b", {}, "Pourquoi ? "), "Pour savoir qui, dans la guilde, sait fabriquer quoi. Tu cherches un enchantement ou une pièce de couture : ce site te dit qui connaît la recette."),
           h("div", { class: "gd-transp" },
             h("div", { class: "gd-oui" }, h("h3", {}, "Ce qu'il partage, et seulement ça"),
-              h("ul", {}, h("li", {}, "le nom de ton personnage ;"), h("li", {}, "sa classe ;"), h("li", {}, "tes métiers et leur niveau (« Enchantement 279/300 ») ;"),
+              h("ul", {}, h("li", {}, "le nom de ton personnage ;"), h("li", {}, "sa classe ;"), h("li", {}, "tes métiers et leur niveau (« Enchantement 279/300 ») ;"), h("li", {}, "ta spécialisation de métier, si tu en as une (ingénieur gnome ou gobelin, fabricant d'armes ou d'armures…) ;"),
                 h("li", {}, "les recettes que tu connais dans ces métiers ;"), h("li", {}, "les recharges de tes recettes (« prête dans 2 j ») ;"),
                 h("li", {}, "et les fiches des autres membres qu'il a déjà reçues, les mêmes informations, pour que tout le monde arrive sur le site.")),
               h("p", { class: "muted small" }, "Ce que tes compagnons voient déjà quand tu leur montres ta fenêtre de métier : l'addon le rassemble au même endroit.")),
@@ -1089,7 +1175,7 @@
         blocNouveautesAddon(A),
         cadre("Les commandes", h("dl", { class: "gd-commandes" },
           h("dt", {}, h("code", {}, "/lbf")), h("dd", {}, "Ce que l'addon partage, et combien de membres sont dans ton carnet."),
-          h("dt", {}, h("code", {}, "/lbf qui <recette>")), h("dd", {}, "Qui sait faire cette recette, en jeu (par exemple : /lbf qui révélation)."),
+          h("dt", {}, h("code", {}, "/lbf qui <recette>")), h("dd", {}, "Qui sait faire cette recette, en jeu (par exemple : /lbf qui révélation). Marche aussi avec un objet lié : /lbf qui, puis Maj + clic sur l'objet."),
           h("dt", {}, h("code", {}, "/lbf envoyer")), h("dd", {}, "Renvoyer tes métiers maintenant."),
           h("dt", {}, h("code", {}, "/lbf code")), h("dd", {}, "Ton code à coller sur le site, rubrique Métiers › Envoyer mes métiers (aussi : Ctrl + clic sur le bouton)."),
           h("dt", {}, h("code", {}, "/lbf pause")), h("dd", {}, "Ne plus rien partager ; les addons des membres connectés effacent ta fiche."),
@@ -1166,7 +1252,7 @@
           etape("3", h("p", {}, "Colle-le ici, puis envoie."))),
         champ, apercu, h("div", { class: "gd-code-actions" }, bouton), retour),
       cadre("Ce qui part",
-        h("p", { class: "gd-pourquoi" }, "Exactement ce que l'addon partage déjà avec la guilde : ton nom, ta classe, tes métiers, tes recettes et tes recharges. Rien d'autre."),
+        h("p", { class: "gd-pourquoi" }, "Exactement ce que l'addon partage déjà avec la guilde : ton nom, ta classe, tes métiers et ta spécialisation, tes recettes et tes recharges. Rien d'autre."),
         h("p", { class: "muted small" }, "Le code porte aussi une petite clé tirée au hasard par ton addon et gardée seulement chez toi : elle prouve au site que c'est bien toi. Ton perso doit être dans la liste de la guilde (rubrique Membres). Addon en pause, le code efface ta fiche."),
         h("div", { class: "gd-docs" }, h("a", { class: "btn ghost", href: "service/worker.js", target: "_blank", rel: "noopener" }, "Lire le code du relais")))));
     if (SURVOL) setTimeout(() => { try { champ.focus({ preventScroll: true }); } catch (e) { champ.focus(); } }, 0);
@@ -1189,7 +1275,8 @@
     },
     metiers: {
       titre: "Métiers", href: "#/metiers",
-      routes: { metiers: (p, q) => (p[0] === "envoyer" ? pageEnvoyer() : pageMetiers(q.get("q") || "", q.get("voir") === "nouveautes")), metier: (p) => (D ? pageMetier(p[0]) : pageMetiers("")), recette: (p) => (D ? pageRecette(p[0]) : pageMetiers("")) },
+      routes: { metiers: (p, q) => (p[0] === "envoyer" ? pageEnvoyer() : p[0] === "emplacement" ? (D ? pageEmplacement(p[1]) : pageMetiers(""))
+        : pageMetiers(q.get("q") || "", q.get("voir") === "nouveautes")), metier: (p) => (D ? pageMetier(p[0]) : pageMetiers("")), recette: (p) => (D ? pageRecette(p[0]) : pageMetiers("")) },
       compte: () => (D && IX.recherche.recettes.length ? pl(IX.recherche.recettes.length, "recette") : null),
       sous: (page, p) => (page === "metier" ? p[0] : page === "metiers" && p[0] === "envoyer" ? "envoyer" : null),
       panneau: (sous) => [...(D ? listeMetiers().map((cle) => {
@@ -1260,7 +1347,8 @@
       if (x && b36(x[1]) && b36(x[2]) * 1000 > Date.now()) recharges[String(b36(x[1]))] = isoDe(b36(x[2]));
     }
     const maj = isoDe(b36(c[4]));
-    return { nom: c[1], classe: (c[2] || "").toLowerCase() || null, maj, vu: texte(recu) || maj, version: texte(c[7]), metiers, recharges };
+    const spes = (c[3] || "").split(".").map(b36).filter(Boolean).map(String);
+    return { nom: c[1], classe: (c[2] || "").toLowerCase() || null, spes, maj, vu: texte(recu) || maj, version: texte(c[7]), metiers, recharges };
   }
   // Les fiches du relais plus récentes que le carnet (guilde.json) passent devant ; une fiche effacée par son membre (code en pause) disparaît.
   // Une recette que guilde.json ne connaît pas encore vient du catalogue (toutes les recettes), lu seulement dans ce cas.
@@ -1282,8 +1370,8 @@
     if (!neuves.length && !oublies.size) return false;
     const membres = base.filter((m) => !oublies.has(m.nom) && !neuves.some((f) => f.nom === m.nom)).concat(neuves);
     const recettes = { ...(D ? D.recettes : {}) }, composants = { ...(D ? D.composants : {}) }, metiers = { ...(D ? D.metiers : {}) };
+    let cat = null;
     if (neuves.some((f) => f.metiers.some((x) => x.recettes.some((id) => !recettes[id])))) {
-      let cat = null;
       try { cat = await lire(FICHIERS.catalogue); } catch (e) { /* sans catalogue, ces recettes attendent la prochaine publication */ }
       if (cat && cat.recettes && typeof cat.recettes === "object") {
         const sues = new Set(membres.flatMap((m) => (m.metiers || []).flatMap((x) => (x.recettes || []).map(String))));
@@ -1301,7 +1389,8 @@
     }
     for (const cle of Object.keys(metiers)) if (!membres.some((m) => (m.metiers || []).some((x) => x.cle === cle))) delete metiers[cle];
     const recu = neuves.map((f) => f.vu).filter(Boolean).sort().pop();
-    preparer({ ...(D || {}), maj: [D && D.maj, recu].filter(Boolean).sort().pop() || null, membres, recettes, composants, metiers, historique: D ? D.historique : [] });
+    const specialites = (D && Object.keys(D.specialites || {}).length ? D.specialites : null) || (cat && cat.specialites) || {};
+    preparer({ ...(D || {}), maj: [D && D.maj, recu].filter(Boolean).sort().pop() || null, membres, recettes, composants, metiers, specialites, historique: D ? D.historique : [] });
     ERREUR = null;
     return true;
   }
