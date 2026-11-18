@@ -1072,3 +1072,37 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ---------------------------------------------------------------- Envoyer mes métiers (le code de /lbf code) */
+.gd-code-etapes { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; }
+.gd-code-etapes li { display: flex; align-items: flex-start; gap: 14px; }
+.gd-code-etapes p { margin: 3px 0 0; color: var(--texte-2); }
+.gd-code-n {
+  flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  font-family: var(--font-title); font-weight: 600; color: var(--turquoise-vif);
+  background: var(--turquoise-voile); box-shadow: inset 0 0 0 1px rgba(79, 217, 207, .35);
+}
+.gd-code-champ {
+  display: block; width: 100%; min-height: 120px; padding: 14px 16px; resize: vertical;
+  font-family: var(--font-mono); font-size: .85rem; line-height: 1.5; word-break: break-all;
+  background: rgba(4, 8, 18, .55); border: 1px solid var(--ligne-forte); border-radius: var(--r);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .35); transition: border-color .3s, box-shadow .3s;
+}
+.gd-code-champ::placeholder { color: var(--texte-3); }
+.gd-code-champ:focus { outline: none; border-color: rgba(79, 217, 207, .6); box-shadow: inset 0 2px 8px rgba(0, 0, 0, .35), 0 0 0 4px rgba(79, 217, 207, .14); }
+.gd-code-apercu:empty, .gd-code-retour:empty { display: none; }
+.gd-code-apercu { margin-top: 14px; padding: 12px 16px; background: rgba(255, 255, 255, .03); border: 1px solid var(--ligne); border-radius: var(--r); }
+.gd-code-apercu p { margin: 0; }
+.gd-code-qui b { font-weight: 600; }
+.gd-code-metiers { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.gd-code-metiers li { display: inline-flex; align-items: center; gap: 8px; font-size: .92rem; }
+.gd-code-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+.gd-code-actions .btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; filter: none; }
+.gd-code-retour { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 14px; }
+.gd-code-retour p { margin: 0; }
+.gd-code-oui { color: var(--ok); }
+.gd-code-non { color: var(--non); }
+kbd {
+  display: inline-block; min-width: 1.6em; padding: 0 6px; font: inherit; font-size: .82em; text-align: center;
+  color: var(--ivoire); background: rgba(255, 255, 255, .06); border: 1px solid var(--ligne-forte); border-bottom-width: 2px; border-radius: 6px;
+}
