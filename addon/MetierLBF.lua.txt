@@ -54,7 +54,7 @@ local function split(s, sep)
 end
 local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
-local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.7.0"
+local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.7.1"
 
 local function plusRecente(a, b)
 	local x, y = split(a or "0", "."), split(b or "0", ".")
@@ -709,7 +709,8 @@ local function montrerCode()
 		local w = CreateFrame("Frame", "MetierLBFCode", UIParent, "BackdropTemplate")
 		w:SetSize(540, 280)
 		w:SetPoint("CENTER", 0, 60)
-		w:SetFrameStrata("DIALOG")
+		w:SetFrameStrata("FULLSCREEN_DIALOG")
+		w:SetToplevel(true)
 		w:SetClampedToScreen(true)
 		w:SetMovable(true)
 		w:EnableMouse(true)
@@ -739,9 +740,13 @@ local function montrerCode()
 		sf:SetPoint("BOTTOMRIGHT", -28, 8)
 		local eb = CreateFrame("EditBox", nil, sf)
 		eb:SetMultiLine(true)
+		eb:SetMaxLetters(0)
+		if eb.SetMaxBytes then eb:SetMaxBytes(0) end
 		eb:SetAutoFocus(false)
+		eb:EnableMouse(true)
 		eb:SetFontObject(ChatFontNormal)
-		eb:SetWidth(460)
+		eb:SetTextColor(1, 1, 1)
+		eb:SetSize(460, 130)
 		eb:SetScript("OnEscapePressed", function() w:Hide() end)
 		eb:SetScript("OnTextChanged", function(self, parUtilisateur)
 			if parUtilisateur then self:SetText(w.code or ""); self:HighlightText() end
@@ -771,8 +776,15 @@ local function montrerCode()
 	w.pied:SetText(string.format("%d caractères · %s", #c, SITE:gsub("^https://", ""):gsub("/$", "")))
 	w.eb:SetText(c)
 	w:Show()
+	w:Raise()
 	w.eb:SetFocus()
 	w.eb:HighlightText()
+	dire(string.format("ton code (%d caractères) est dans la fenêtre au milieu de l'écran : Ctrl+C pour le copier, puis colle-le sur le site, Métiers › Envoyer mes métiers.", #c))
+end
+
+local function ouvrirCode()
+	local ok, err = pcall(montrerCode)
+	if not ok then dire("|cffff6060la fenêtre du code n'a pas pu s'ouvrir|r : " .. tostring(err)) end
 end
 
 ---------------------------------------------------------------- bouton de la mini-carte
@@ -806,7 +818,7 @@ local function clic(souris)
 	elseif IsShiftKeyDown and IsShiftKeyDown() then
 		envoyerMaintenant()
 	elseif IsControlKeyDown and IsControlKeyDown() then
-		montrerCode()
+		ouvrirCode()
 	else
 		statut()
 	end
@@ -925,7 +937,7 @@ SlashCmdList.METIERLBF = function(arg)
 	elseif cmd == "envoyer" then envoyerMaintenant()
 	elseif cmd == "qui" then chercher(reste)
 	elseif cmd == "bouton" then basculerBouton()
-	elseif cmd == "code" then montrerCode()
+	elseif cmd == "code" then ouvrirCode()
 	else statut() end
 end
 
