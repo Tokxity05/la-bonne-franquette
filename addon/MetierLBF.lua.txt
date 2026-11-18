@@ -1,4 +1,4 @@
--- Métier LBF - La Bonne Franquette
+-- Métiers LBF - La Bonne Franquette
 -- Partage avec la guilde : nom, classe, métiers, recettes connues, recharges. Rien d'autre.
 
 local PREFIXE, PROTOCOLE = "MetierLBF", "1"
@@ -26,7 +26,7 @@ local function court(nom) return nom and (nom:match("^([^%-]+)") or nom) end
 local function moi() return court(texte((sur(UnitName, "player")))) end
 local function now() return sur(time) or 0 end
 local function enGuilde() return IsInGuild and oui(sur(IsInGuild)) end
-local function dire(msg) print(OR .. "Métier LBF|r : " .. msg) end
+local function dire(msg) print(OR .. "Métiers LBF|r : " .. msg) end
 
 local B36 = "0123456789abcdefghijklmnopqrstuvwxyz"
 local function b36(n)
@@ -52,7 +52,7 @@ local function split(s, sep)
 end
 local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
-local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.3.3"
+local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.4.1"
 
 local function plusRecente(a, b)
 	local x, y = split(a or "0", "."), split(b or "0", ".")
@@ -86,11 +86,11 @@ local function annoncerMaj()
 	local v = nouvelleVersion()
 	if not v or prevenu then return end
 	prevenu = true
-	dire(string.format("|cffff8000nouvelle version %s disponible|r (tu as la %s). Télécharge-la sur %s#/addon puis relance le jeu.", v, VERSION, SITE))
+	dire(string.format("|cffff8000nouvelle version %s disponible|r (tu as la %s). Télécharge-la sur %s#/addons/metier-lbf puis relance le jeu.", v, VERSION, SITE))
 	-- au milieu de l'écran aussi : le bouton peut être rangé dans un sac à boutons
 	if RaidNotice_AddMessage and RaidWarningFrame then
 		local couleur = (ChatTypeInfo and ChatTypeInfo["RAID_WARNING"]) or { r = 1, g = 0.5, b = 0 }
-		sur(RaidNotice_AddMessage, RaidWarningFrame, "Métier LBF : nouvelle version " .. v .. " disponible, pense à mettre l'addon à jour", couleur)
+		sur(RaidNotice_AddMessage, RaidWarningFrame, "Métiers LBF : nouvelle version " .. v .. " disponible, pense à mettre l'addon à jour", couleur)
 	end
 end
 local function verifierVersion(v)
@@ -190,10 +190,12 @@ local function lireRoster()
 	if not enGuilde() or now() - dernierRoster < 60 then return end
 	local n = nombre(sur(GetNumGuildMembers)) or 0
 	if n <= 0 then return end
-	local noms, liste = {}, {}
+	local noms, liste, rangs = {}, {}, {}
 	for i = 1, n do
-		local nom = court(texte((sur(GetGuildRosterInfo, i))))
+		local brut, rangNom, rangIdx = sur(GetGuildRosterInfo, i)
+		local nom = court(texte(brut))
 		if nom then noms[nom] = true; liste[#liste + 1] = nom end
+		if nombre(rangIdx) and texte(rangNom) then rangs[rangIdx] = texte(rangNom) end
 	end
 	-- liste incomplète (membres hors ligne absents) : on ne retire personne
 	local nous = moi()
@@ -201,7 +203,7 @@ local function lireRoster()
 	dernierRoster = now()
 	local d = db()
 	d.guilde = texte((sur(GetGuildInfo, "player"))) or d.guilde
-	d.roster, d.rosterMaj = liste, now()
+	d.roster, d.rosterMaj, d.rangs = liste, now(), rangs
 	for nom in pairs(d.membres) do
 		if not noms[nom] then d.membres[nom] = nil end
 	end
@@ -485,7 +487,7 @@ local function statut()
 	if m then
 		local L = {}
 		for _, x in pairs(m.metiers) do L[#L + 1] = string.format("%s %s (%d recettes)", x.nom or "?", x.rang or "?", #(x.ids or {})) end
-		dire("tes métiers : " .. (#L > 0 and table.concat(L, ", ") or "rien encore, ouvre la fenêtre de chacun de tes métiers."))
+		dire("tes métiers : " .. (#L > 0 and table.concat(L, ", ") or "rien encore, ouvre une fois chacun de tes métiers."))
 	end
 	dire("partagé avec la guilde : nom, classe, métiers, recettes, recharges. Rien d'autre.")
 	dire("/lbf qui <recette>, /lbf envoyer, /lbf pause, /lbf reprendre, /lbf bouton")
@@ -497,11 +499,11 @@ local ICONE = "Interface\\Icons\\Trade_BlackSmithing"
 local bouton
 
 local function bulle(tt)
-	tt:AddDoubleLine("Métier LBF", "Version " .. VERSION, 1, 0.82, 0, 0.62, 0.62, 0.62)
+	tt:AddDoubleLine("Métiers LBF", "Version " .. VERSION, 1, 0.82, 0, 0.62, 0.62, 0.62)
 	local nv = nouvelleVersion()
 	if nv then
 		tt:AddLine("Nouvelle version disponible : " .. nv, 1, 0.5, 0)
-		tt:AddLine("À télécharger sur le site de la guilde, page « L'addon ».", 1, 1, 1, true)
+		tt:AddLine("À télécharger sur le site de la guilde, rubrique « Addons ».", 1, 1, 1, true)
 	end
 	if enPause() then tt:AddLine("Partage en pause", 1, 0.3, 0.3) else tt:AddLine("Partage actif", 0.2, 1, 0.2) end
 	tt:AddLine(" ")
@@ -558,7 +560,7 @@ local function creerBouton()
 	local Icone = LibStub and LibStub("LibDBIcon-1.0", true)
 	if LDB and Icone then
 		local obj = LDB:GetDataObjectByName("MetierLBF") or LDB:NewDataObject("MetierLBF", {
-			type = "launcher", label = "Métier LBF", text = "Métier LBF", icon = ICONE,
+			type = "launcher", label = "Métiers LBF", text = "Métiers LBF", icon = ICONE,
 			OnClick = function(_, souris) clic(souris) end,
 			OnTooltipShow = function(tt) bulle(tt) end,
 		})
@@ -608,7 +610,7 @@ local function creerBouton()
 		bouton = b
 	end
 	if AddonCompartmentFrame and AddonCompartmentFrame.RegisterAddon then
-		pcall(AddonCompartmentFrame.RegisterAddon, AddonCompartmentFrame, { text = "Métier LBF", icon = ICONE, notCheckable = true,
+		pcall(AddonCompartmentFrame.RegisterAddon, AddonCompartmentFrame, { text = "Métiers LBF", icon = ICONE, notCheckable = true,
 			func = function(_, _, _, _, souris) clic(souris) end })
 	end
 	majBouton()
