@@ -652,3 +652,4 @@ a.lv-titre-nom:hover { color: #fff2a8; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+.gd-pied .gd-pied-copy { margin-top: 10px; font-family: var(--font-title, "Cinzel", Georgia, serif); color: var(--gold-soft, #f0c75e); letter-spacing: .04em; }
