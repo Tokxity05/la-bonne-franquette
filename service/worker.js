@@ -2,7 +2,7 @@
    Un membre tape /lbf code en jeu, copie le texte et le colle sur le site (Métiers › Envoyer mes métiers) : le site l'envoie ici.
      POST /envoyer   { "code": "LBF1!<fiche>!<clé>" }   vérifie le code et garde la fiche
      GET  /fiches    les fiches reçues : { maj, fiches: { nom: { f, recu } }, oublis: { nom: date } }
-   Gardé : la fiche telle que l'addon la partage déjà sur le canal de la guilde (nom, classe, métiers, recettes, recharges, version)
+   Gardé : la fiche telle que l'addon la partage déjà sur le canal de la guilde (nom, classe, spécialisations, métiers, recettes, recharges, version)
    et l'empreinte de la clé du perso, jamais la clé. Ni adresse IP, ni cookie, ni rien d'autre.
    Réglages : un espace KV lié sous le nom FICHES ; la variable SITE si le site change d'adresse. */
 
@@ -38,7 +38,7 @@ function lireCode(brut) {
   if (fiche.length > MAX_FICHE) return { erreur: "Ce code est trop long." };
   if (fiche.startsWith("X;")) return nomValide(fiche.slice(2)) ? { oubli: true, nom: fiche.slice(2), cle } : abime;
   const c = fiche.split(";");
-  if (c.length !== 8 || c[0] !== "1" || !nomValide(c[1]) || !CLASSES.has(c[2]) || c[3] !== "" || !/^[0-9a-z]{1,8}$/.test(c[4])) return abime;
+  if (c.length !== 8 || c[0] !== "1" || !nomValide(c[1]) || !CLASSES.has(c[2]) || !/^([0-9a-z]{1,6}(\.[0-9a-z]{1,6}){0,3})?$/.test(c[3]) || !/^[0-9a-z]{1,8}$/.test(c[4])) return abime;
   const metiers = c[5] ? c[5].split("/") : [];
   if (!metiers.length || metiers.length > 12) return abime;
   let recettes = 0;
