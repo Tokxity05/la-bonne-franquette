@@ -1,6 +1,6 @@
 /* Le site de la guilde La Bonne Franquette (LBF, World of Warcraft: Forever). « Métiers LBF » ne désigne que l'addon des métiers.
    Trois fichiers, lus chacun de leur côté (un fichier absent n'éteint que sa rubrique) :
-     site.json            RÉDIGÉ : la guilde (nom, court, accroche, présentation), les rubriques de l'accueil et du menu, les addons
+     site.json            RÉDIGÉ : la guilde (nom, court, accroche, présentation), les rubriques de l'accueil et du menu, les addons, le nom des rangs
      data/membres.json    les membres d'après l'armurerie officielle de Blizzard (niveau, race, rang, niveau d'objet, fiche officielle)
      data/guilde.json     les métiers, d'après l'addon Métiers LBF des membres : rangs, recettes connues, recharges, historique, infos de l'addon
    Et le relais (site.json > service, un Worker Cloudflare : service/worker.js) : les codes que les membres collent eux-mêmes (/lbf code en jeu,
@@ -1316,6 +1316,9 @@
       rubriques: (s && Array.isArray(s.rubriques) ? s.rubriques : []).filter((r) => texte(r && r.titre) && bon(r))
         .map((r) => ({ id: r.id, titre: texte(r.titre), icone: texte(r.icone), desc: texte(r.desc) })),
       addons: [],
+      // Le nom des rangs, écrit à la main dans site.json (l'armurerie de Blizzard ne le donne pas) : il passe devant tout le reste
+      rangs: s && s.rangs && typeof s.rangs === "object" && !Array.isArray(s.rangs)
+        ? Object.fromEntries(Object.entries(s.rangs).filter(([k, v]) => /^\d+$/.test(k) && texte(v)).map(([k, v]) => [k, texte(v)])) : {},
       service: typeof (s && s.service) === "string" && /^(https:\/\/[\w.-]+|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)(\/[\w.-]*)*$/.test(s.service.trim()) ? s.service.trim().replace(/\/+$/, "") : null,
     };
     vus.clear();
@@ -1461,6 +1464,7 @@
     try { if (mb.status === "fulfilled") lireMembres(mb.value); else ERREUR_R = panne(); } catch (e) { R = null; ERREUR_R = "lecture"; }
     // Les noms des rangs : data/rangs.json (lus en jeu par l'addon d'un officier), à part de la liste que GitHub relit sur l'armurerie
     if (R && rg.status === "fulfilled" && rg.value && rg.value.rangs && typeof rg.value.rangs === "object" && !Array.isArray(rg.value.rangs)) R.rangs = { ...rg.value.rangs, ...R.rangs };
+    if (R) R.rangs = { ...R.rangs, ...CFG.rangs };
     if (mt.status === "fulfilled") {
       const d = mt.value;
       ADDON = d && typeof d.addon === "object" ? d.addon : null;
