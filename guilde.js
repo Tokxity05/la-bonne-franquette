@@ -217,6 +217,12 @@
   function cadre(titre, ...contenu) {
     return h("section", { class: `frame${titre ? " titre" : ""}` }, titre ? h("h2", { class: "frame-title" }, titre) : null, contenu);
   }
+  // Le logo de WoW Forever en tête de page : un halo qui respire derrière, une lente flottaison, un reflet qui le traverse (guilde.css, gd-logo-)
+  function logoHero() {
+    return h("div", { class: "gd-logo-scene" }, h("span", { class: "gd-logo-halo", "aria-hidden": "true" }),
+      h("span", { class: "gd-logo-flotte" }, h("img", { class: "gd-logo", src: "img/wow-forever-logo.png", alt: "World of Warcraft: Forever", width: 360, height: 293 }),
+        h("span", { class: "gd-logo-reflet", "aria-hidden": "true" })));
+  }
   function setTitre(t) { document.title = t ? `${t} · ${SITE}` : `${SITE} — ${(D && D.guilde) || GUILDE_DEFAUT}`; }
   function fil(...etapes) {
     const L = [h("a", { href: "#/" }, "Accueil")];
@@ -294,7 +300,7 @@
         h("div", { class: "lv-tete-txt" }, h(titre, { class: "lv-nom" }, lienWh(t, n, r.n || `Recette ${id}`, `q-${couleurNom(r)}`)), sous ? h("div", { class: "lv-sous" }, majuscule(sous)) : null)),
       r.e ? h("p", { class: "lv-desc" }, r.e) : r.k === "spell" ? null : h("p", { class: "lv-desc" }, `Crée : ${r.n}.`),
       stats.length ? h("ul", { class: "lv-stats" }, stats.map(([txt, cls]) => h("li", { class: cls }, txt))) : null,
-      co.length ? [h("div", { class: "lv-or" }, "Composants :"), h("div", { class: "lv-comps" }, co.map(([cid, q]) => {
+      co.length ? [h("div", { class: "lv-or" }, "Composants"), h("div", { class: "lv-comps" }, co.map(([cid, q]) => {
         const c = D.composants[String(cid)] || {};
         return h("div", { class: "lv-comp" }, h("span", { class: "lv-comp-ic" }, lienWh("item", cid, icone(c.i, "md")), q > 1 ? h("b", {}, q) : null),
           h("span", { class: "lv-comp-nom" }, lienWh("item", cid, c.n || `Objet ${cid}`)));
@@ -414,7 +420,7 @@
       tries.length > n ? h("button", { type: "button", class: "gd-plus", onclick: () => montrer(tries.length) }, `Voir les ${tries.length} membres`) : null);
     montrer(8);
     vue.append(
-      h("div", { class: "gd-hero" }, h("img", { class: "gd-logo", src: "img/wow-forever-logo.png", alt: "World of Warcraft: Forever", width: 360, height: 293 }), h("h1", {}, SITE), h("p", { class: "gd-hero-guilde" }, D.guilde || GUILDE_DEFAUT), h("div", { class: "rune-divider" }),
+      h("div", { class: "gd-hero" }, logoHero(), h("h1", {}, SITE), h("p", { class: "gd-hero-guilde" }, D.guilde || GUILDE_DEFAUT), h("div", { class: "gd-separateur", "aria-hidden": "true" }),
         h("p", { class: "gd-hero-resume" }, majuscule(resume)),
         h("a", { class: "gd-encart", href: "#/addon" }, icone("inv_misc_book_11", "sm"), h("b", {}, A.version ? `${A.nom} ${A.version}` : A.nom), h("span", {}, "· Télécharger"))),
       h("div", { class: "stack" },
@@ -464,8 +470,8 @@
     vue.append(
       fil(h("a", { href: `#/metier/${encodeURIComponent(r.m)}` }, nomMetier(r.m)), cat ? h("span", {}, cat.nom) : null),
       h("div", { class: "lv-fenetre lv-seule" },
-        h("div", { class: "lv-titre" }, h("span", { class: "lv-portrait" }, icone(iconeMetier(r.m), "lg")),
-          h("a", { class: "lv-titre-nom", href: `#/metier/${encodeURIComponent(r.m)}` }, cat ? `${nomMetier(r.m)} · ${cat.nom}` : nomMetier(r.m))),
+        h("div", { class: "lv-entete" }, h("span", { class: "lv-portrait" }, icone(iconeMetier(r.m), "lg")),
+          h("div", { class: "lv-entete-txt" }, h("a", { class: "lv-titre-nom", href: `#/metier/${encodeURIComponent(r.m)}` }, cat ? `${nomMetier(r.m)} · ${cat.nom}` : nomMetier(r.m)))),
         h("div", { class: "lv-corps" }, h("div", { class: "lv-droite" }, detailRecette(id, { titre: "h1" })))),
       h("div", { class: "stack", style: { marginTop: "34px" } }, cadre(qui.length ? `Qui sait la faire (${qui.length})` : "Qui sait la faire",
         qui.length ? h("div", { class: "gd-membres" }, qui.map(({ m, x }) => {
@@ -492,7 +498,7 @@
     const artisanat = m.metiers.filter(avecRecettes);
     const autres = m.metiers.filter((x) => !artisanat.includes(x));
     vue.append(fil(h("span", {}, m.nom)),
-      h("section", { class: "frame" },
+      h("section", { class: "frame gd-entete" },
         h("div", { class: "gd-tete-membre" }, h("h1", { class: classeCss(m) }, m.nom), h("span", { class: "gd-membre-sous" }, [identite(m), vu(m)].filter(Boolean).join(" · "))),
         autres.length ? h("div", { class: "gd-autres" }, h("span", {}, artisanat.length ? "Ses autres métiers :" : "Ses métiers :"), autres.map((x) => h("a", { class: "gd-autre", href: `#/metier/${encodeURIComponent(x.cle)}` },
           icone(iconeMetier(x.cle), "sm"), nomMetier(x.cle), h("i", {}, x.rang != null ? `${x.rang}/${x.max || "?"}` : "rang inconnu"),
@@ -547,7 +553,7 @@
         const fermee = replies.has(g.nom) && !mots.length;
         L.push(h("button", { type: "button", class: "lv-cat", "aria-expanded": String(!fermee),
           onclick: () => { if (replies.has(g.nom)) replies.delete(g.nom); else replies.add(g.nom); dessinerListe(); } },
-          h("span", { class: "lv-cat-nom" }, g.nom), h("span", { class: "lv-plie", "aria-hidden": "true" }, fermee ? "+" : "−")));
+          h("span", { class: "lv-cat-nom" }, g.nom), h("span", { class: "lv-plie", "aria-hidden": "true" })));
         if (fermee) continue;
         for (const id of g.ids) {
           const coul = couleur(D.recettes[id]);
@@ -573,16 +579,19 @@
     }
     function dessiner() {
       fill(fenetre,
-        h("div", { class: "lv-titre" }, h("span", { class: "lv-portrait" }, icone(iconeMetier(x.cle), "lg")), h("h2", { class: "lv-titre-nom" }, nomMetier(x.cle))),
-        x.rang != null ? h("div", { class: "lv-barre" }, h("span", { class: "lv-barre-plein", style: { width: `${Math.max(0, Math.min(100, (x.rang / (x.max || 300)) * 100))}%` } }),
-          h("span", { class: "lv-barre-txt" }, `${nomMetier(x.cle)} : ${x.rang}/${x.max || "?"}`)) : h("div", { class: "lv-sans-barre" }),
+        // L'en-tête : le métier, sa barre de compétence (fine), puis un onglet par métier
+        h("div", { class: "lv-entete" }, h("span", { class: "lv-portrait" }, icone(iconeMetier(x.cle), "lg")),
+          h("div", { class: "lv-entete-txt" }, h("h2", { class: "lv-titre-nom" }, nomMetier(x.cle)),
+            x.rang != null ? h("div", { class: "lv-niveau" },
+              h("span", { class: "lv-barre", role: "progressbar", "aria-label": `Compétence en ${nomMetier(x.cle)}`, "aria-valuemin": 0, "aria-valuemax": x.max || 300, "aria-valuenow": x.rang },
+                h("span", { class: "lv-barre-plein", style: { width: `${Math.max(0, Math.min(100, (x.rang / (x.max || 300)) * 100))}%` } })),
+              h("span", { class: "lv-barre-txt" }, h("b", {}, x.rang), ` / ${x.max || "?"}`)) : null),
+          h("nav", { class: "lv-onglets", "aria-label": `Métiers de ${m.nom}` }, artisanat.map((a) => h("button", { type: "button", class: `lv-onglet${a === x ? " actif" : ""}`,
+            "aria-pressed": String(a === x),
+            onclick: () => { if (a === x) return; x = a; choisie = null; cherche = ""; champ.value = ""; replies.clear(); liste.scrollTop = 0; adresse(); dessiner(); } },
+            icone(iconeMetier(a.cle), "sm"), h("span", { class: "lv-onglet-nom" }, nomMetier(a.cle)))))),
         h("div", { class: "lv-corps" }, h("div", { class: "lv-gauche" }, h("div", { class: "lv-outils" }, champ, bouton), liste), droite),
-        pied,
-        // Un onglet par métier, sur le bord droit, comme en jeu
-        h("nav", { class: "lv-onglets", "aria-label": `Métiers de ${m.nom}` }, artisanat.map((a) => h("button", { type: "button", class: `lv-onglet${a === x ? " actif" : ""}`,
-          "aria-pressed": String(a === x), "aria-label": nomMetier(a.cle), title: nomMetier(a.cle),
-          onclick: () => { if (a === x) return; x = a; choisie = null; cherche = ""; champ.value = ""; replies.clear(); liste.scrollTop = 0; adresse(); dessiner(); } },
-          icone(iconeMetier(a.cle), "lg")))));
+        pied);
       dessinerListe();
       dessinerDetail();
       if (premier) {
@@ -623,7 +632,7 @@
         if (!garde.length) continue;
         const fermee = replies.has(c.nom) && !mots.length;
         L.push(h("button", { type: "button", class: "lv-cat", "aria-expanded": String(!fermee), onclick: () => { if (replies.has(c.nom)) replies.delete(c.nom); else replies.add(c.nom); dessinerRecettes(); } },
-          h("span", { class: "lv-cat-nom" }, c.nom), h("span", { class: "lv-cat-droite" }, h("span", { class: "gd-compte" }, garde.length), h("span", { class: "lv-plie", "aria-hidden": "true" }, fermee ? "+" : "−"))));
+          h("span", { class: "lv-cat-nom" }, c.nom), h("span", { class: "lv-cat-droite" }, h("span", { class: "gd-compte" }, garde.length), h("span", { class: "lv-plie", "aria-hidden": "true" }))));
         if (fermee) continue;
         // Chaque recette avec le nom de ceux qui l'ont (les patrons de tous les membres mis en commun)
         L.push(h("div", { class: "gd-cat-corps" }, garde.map((id) => {
@@ -652,7 +661,7 @@
     })));
     blocMembres.classList.add("gd-metier-membres");
     vue.append(fil(h("span", {}, nomMetier(cle))),
-      h("section", { class: "frame" }, h("div", { class: "gd-tete-metier" }, icone(iconeMetier(cle), "xl"),
+      h("section", { class: "frame gd-entete" }, h("div", { class: "gd-tete-metier" }, icone(iconeMetier(cle), "xl"),
         h("div", {}, h("h1", {}, nomMetier(cle)), h("p", {}, [pl(membres.length, "membre"), ids.length ? `${ids.length} recette${ids.length > 1 ? "s" : ""} connue${ids.length > 1 ? "s" : ""} dans la guilde` : null].filter(Boolean).join(" · "))))),
       h("div", { class: "gd-metier" }, blocRecettes, blocMembres));
   }
@@ -672,7 +681,7 @@
     const point = (titre, ...contenu) => h("div", { class: "gd-point" }, h("h3", {}, titre), contenu);
     const doc = (href, texte) => h("a", { class: "btn ghost", href, target: "_blank", rel: "noopener" }, texte);
     vue.append(
-      h("div", { class: "gd-hero gd-hero-petit" }, h("h1", {}, `L'addon ${A.nom}`), h("div", { class: "rune-divider" }),
+      h("div", { class: "gd-hero gd-hero-petit" }, h("h1", {}, `L'addon ${A.nom}`), h("div", { class: "gd-separateur", "aria-hidden": "true" }),
         h("p", { class: "gd-hero-resume" }, "Il partage tes métiers avec la guilde : c'est lui qui remplit ce site.")),
       h("div", { class: "stack" },
         // D'abord ce qu'il fait, et seulement ça (le fond de addon/LISEZMOI.txt)
@@ -721,7 +730,7 @@
       : ERREUR === "lecture"
         ? "Les données de la guilde n'ont pas pu être lues. Réessaie dans un instant."
         : "Aucun membre n'a encore partagé ses métiers. Installe l'addon Métier LBF et ouvre une fois chacune de tes fenêtres de métier en jeu : le carnet se remplira au prochain relais.";
-    vue.append(h("div", { class: "gd-hero" }, h("img", { class: "gd-logo", src: "img/wow-forever-logo.png", alt: "World of Warcraft: Forever", width: 360, height: 293 }), h("h1", {}, SITE), h("p", { class: "gd-hero-guilde" }, GUILDE_DEFAUT), h("div", { class: "rune-divider" })),
+    vue.append(h("div", { class: "gd-hero" }, logoHero(), h("h1", {}, SITE), h("p", { class: "gd-hero-guilde" }, GUILDE_DEFAUT), h("div", { class: "gd-separateur", "aria-hidden": "true" })),
       cadre("Le carnet est encore vide", h("div", { class: "gd-vide" }, h("p", {}, texte), h("a", { class: "btn", href: "#/addon" }, "Télécharger l'addon"))));
   }
   function pageIntrouvable() {
