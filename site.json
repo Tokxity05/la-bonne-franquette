@@ -7,7 +7,7 @@
     "nom": "La Bonne Franquette",
     "court": "LBF",
     "accroche": "Guilde Alliance · World of Warcraft: Forever · Europe",
-    "presentation": "Bienvenue sur le site de La Bonne Franquette. Retrouve ici les membres de la guilde et qui sait fabriquer quoi."
+    "presentation": ""
   },
   "rubriques": [
     { "id": "membres", "titre": "Membres", "icone": "achievement_guildperk_everybodysfriend", "desc": "Les membres de la guilde, leur classe, leur niveau et leur fiche officielle." },
