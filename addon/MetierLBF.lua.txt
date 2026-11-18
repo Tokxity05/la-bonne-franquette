@@ -52,7 +52,7 @@ local function split(s, sep)
 end
 local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
-local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.3.0"
+local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.3.3"
 
 local function plusRecente(a, b)
 	local x, y = split(a or "0", "."), split(b or "0", ".")
@@ -87,6 +87,11 @@ local function annoncerMaj()
 	if not v or prevenu then return end
 	prevenu = true
 	dire(string.format("|cffff8000nouvelle version %s disponible|r (tu as la %s). Télécharge-la sur %s#/addon puis relance le jeu.", v, VERSION, SITE))
+	-- au milieu de l'écran aussi : le bouton peut être rangé dans un sac à boutons
+	if RaidNotice_AddMessage and RaidWarningFrame then
+		local couleur = (ChatTypeInfo and ChatTypeInfo["RAID_WARNING"]) or { r = 1, g = 0.5, b = 0 }
+		sur(RaidNotice_AddMessage, RaidWarningFrame, "Métier LBF : nouvelle version " .. v .. " disponible, pense à mettre l'addon à jour", couleur)
+	end
 end
 local function verifierVersion(v)
 	if not v or not plusRecente(v, VERSION) then return end
@@ -321,6 +326,7 @@ local function envoyerFiche()
 	suite = (suite % 1295) + 1
 	for i, x in ipairs(p) do file[#file + 1] = "D" .. b36(suite) .. ":" .. i .. ":" .. #p .. ":" .. x end
 	dernierEnvoi = now()
+	db().envoi = dernierEnvoi
 	lancerFile()
 end
 
@@ -429,11 +435,11 @@ local function chercher(mot)
 end
 
 local function compte()
-	local d, avec = db(), 0
-	for _, m in pairs(d.membres) do
-		if type(m) == "table" and compter(m.metiers) > 0 then avec = avec + 1 end
+	local n = 0
+	for _, m in pairs(db().membres) do
+		if type(m) == "table" and compter(m.metiers) > 0 then n = n + 1 end
 	end
-	return compter(d.membres), avec
+	return n
 end
 
 local function mesMetiers()
@@ -474,8 +480,7 @@ local function envoyerMaintenant()
 end
 
 local function statut()
-	local n, avec = compte()
-	dire(string.format("v%s, partage %s, %d membres connus (%d avec métiers).", VERSION, enPause() and "en pause" or "actif", n, avec))
+	dire(string.format("v%s, partage %s, %d membre(s) avec leurs métiers dans ton carnet.", VERSION, enPause() and "en pause" or "actif", compte()))
 	local m = maFiche()
 	if m then
 		local L = {}
@@ -492,7 +497,6 @@ local ICONE = "Interface\\Icons\\Trade_BlackSmithing"
 local bouton
 
 local function bulle(tt)
-	local n, avec = compte()
 	tt:AddDoubleLine("Métier LBF", "Version " .. VERSION, 1, 0.82, 0, 0.62, 0.62, 0.62)
 	local nv = nouvelleVersion()
 	if nv then
@@ -501,12 +505,8 @@ local function bulle(tt)
 	end
 	if enPause() then tt:AddLine("Partage en pause", 1, 0.3, 0.3) else tt:AddLine("Partage actif", 0.2, 1, 0.2) end
 	tt:AddLine(" ")
-	tt:AddLine("Partagé avec la guilde :", 1, 0.82, 0)
-	tt:AddLine("nom, classe, métiers, recettes connues, recharges.", 1, 1, 1, true)
-	tt:AddLine("Rien d'autre : ni sacs, ni or, ni position.", 0.7, 0.7, 0.7, true)
-	tt:AddLine(" ")
-	tt:AddDoubleLine("Dernier envoi", enCours and "en cours…" or depuis(dernierEnvoi), 1, 0.82, 0, 1, 1, 1)
-	tt:AddDoubleLine("Membres connus", string.format("%d (%d avec métiers)", n, avec), 1, 0.82, 0, 1, 1, 1)
+	tt:AddDoubleLine("Dernier envoi", enCours and "en cours…" or depuis(db().envoi), 1, 0.82, 0, 1, 1, 1)
+	tt:AddDoubleLine("Membres connus", tostring(compte()), 1, 0.82, 0, 1, 1, 1)
 	local L = mesMetiers()
 	tt:AddDoubleLine("Tes métiers", #L > 0 and table.concat(L, ", ") or "ouvre leur fenêtre", 1, 0.82, 0, 1, 1, 1)
 	tt:AddLine(" ")
@@ -671,7 +671,11 @@ f:SetScript("OnEvent", function(_, ev, a1, a2, a3, a4)
 			end)
 		end
 		C_Timer.After(5, function()
-			if enGuilde() then pcall(lireRangs) else local nom = moi(); if nom then db().membres[nom] = nil end end
+			local nous = moi()
+			if enGuilde() then pcall(lireRangs) elseif nous then db().membres[nous] = nil end
+			for nom, m in pairs(db().membres) do
+				if nom ~= nous and (type(m) ~= "table" or compter(m.metiers) == 0) then db().membres[nom] = nil end
+			end
 		end)
 		if not nouvelleVersion() then db().derniere = nil end
 		C_Timer.After(12, annoncerMaj)
