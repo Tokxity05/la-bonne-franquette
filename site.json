@@ -1,0 +1,20 @@
+{
+  "_meta": {
+    "updated": "2026-11-18",
+    "note": "RÉDIGÉ : la vitrine du site de guilde LBF. Une rubrique de plus = une entrée dans rubriques (et sa page dans guilde.js) ; un addon de plus = une entrée dans addons. Les données de chaque rubrique vivent dans data/ (membres.json, guilde.json pour les métiers)."
+  },
+  "guilde": {
+    "nom": "La Bonne Franquette",
+    "court": "LBF",
+    "accroche": "Guilde Alliance · World of Warcraft: Forever · Europe",
+    "presentation": "Bienvenue sur le site de La Bonne Franquette. Retrouve ici les membres de la guilde et qui sait fabriquer quoi."
+  },
+  "rubriques": [
+    { "id": "membres", "titre": "Membres", "icone": "achievement_guildperk_everybodysfriend", "desc": "Les membres de la guilde, leur classe, leur niveau et leur fiche officielle." },
+    { "id": "metiers", "titre": "Métiers", "icone": "trade_blacksmithing", "desc": "Qui sait fabriquer quoi : les recettes de tous les membres mises en commun." },
+    { "id": "addons", "titre": "Addons", "icone": "inv_misc_gear_01", "desc": "Les addons de la guilde, à télécharger." }
+  ],
+  "addons": [
+    { "id": "metier-lbf", "nom": "Métiers LBF", "icone": "trade_blacksmithing", "desc": "Partage tes métiers et tes recettes avec la guilde : c'est lui qui remplit la rubrique Métiers.", "fichier": "MetierLBF.zip" }
+  ]
+}
