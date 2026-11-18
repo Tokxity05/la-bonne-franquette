@@ -1106,3 +1106,18 @@ kbd {
   display: inline-block; min-width: 1.6em; padding: 0 6px; font: inherit; font-size: .82em; text-align: center;
   color: var(--ivoire); background: rgba(255, 255, 255, .06); border: 1px solid var(--ligne-forte); border-bottom-width: 2px; border-radius: 6px;
 }
+
+/* ---------------------------------------------------------------- Prêtes maintenant : les recharges de la guilde */
+.gd-rch-aide { margin: 0 0 10px; }
+.gd-rch { display: grid; gap: 2px; }
+.gd-rch-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; min-height: 54px; padding: 8px 12px; border-radius: 12px; transition: background-color .2s; }
+.gd-rch-ligne:hover { background: var(--survol); }
+.gd-rch-recette { flex: 1 1 240px; min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: center; color: var(--texte); line-height: 1.35; }
+.gd-rch-recette .icon { grid-row: span 2; }
+.gd-rch-recette:hover { text-decoration: none; }
+.gd-rch-recette:hover .gd-res-nom { text-decoration: underline; }
+.gd-rch-qui { display: flex; flex-wrap: wrap; gap: 6px; }
+a.gd-recharge:hover { text-decoration: none; filter: brightness(1.18); }
+.gd-recharge.inconnue { color: var(--texte-3); background: rgba(255, 255, 255, .03); border-color: var(--ligne-forte); }
+.gd-recharge.inconnue::before { box-shadow: none; }
+
