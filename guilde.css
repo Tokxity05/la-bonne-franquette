@@ -1,5 +1,6 @@
 /* ==========================================================================
-   Métier LBF — le site de la guilde La Bonne Franquette (World of Warcraft: Forever)
+   LBF — le site de la guilde La Bonne Franquette (World of Warcraft: Forever) : accueil, Membres, Métiers, Addons
+   (« Métiers LBF » n'est plus que le nom de l'addon des métiers).
    Direction artistique « nuit arcanique » (18/11), tirée du logo de WoW Forever : un bleu nuit profond,
    une aurore et un champ d'étoiles en CSS pur, des cartes en verre dépoli, un accent turquoise (le cristal
    du logo) et un or clair pour les touches précieuses. Volontairement loin du Grimoire : ni pierre, ni cuir,
@@ -213,22 +214,36 @@ code {
   transition: color .2s, background-color .2s, border-color .2s, box-shadow .3s;
 }
 .gd-lien:hover { color: var(--texte); background: var(--survol); text-decoration: none; }
-.gd-deroule[open] > .gd-lien { color: var(--texte); background: var(--survol); }
-.gd-lien.actif, .gd-deroule.actif > .gd-lien {
+.gd-lien.actif, .gd-deroule.actif {
   color: var(--turquoise-vif);
   background: var(--turquoise-voile);
   border-color: rgba(79, 217, 207, .3);
   box-shadow: 0 0 18px -6px rgba(79, 217, 207, .5);
 }
+/* Une rubrique à liens directs (Métiers, Addons) : une seule pastille, son nom mène à sa page, la flèche déroule le panneau
+   (à la souris, le survol aussi ; un pont invisible sous la pastille laisse passer la souris jusqu'au panneau) */
+.gd-deroule {
+  position: relative; display: inline-flex; align-items: center;
+  border: 1px solid transparent; border-radius: 999px;
+  transition: color .2s, background-color .2s, border-color .2s, box-shadow .3s;
+}
+.gd-deroule > .gd-lien { min-height: 36px; padding-right: 3px; border: 0; }
+.gd-deroule > .gd-lien:hover { background: none; }
+.gd-deroule:hover, .gd-deroule.ouvert { background: var(--survol); }
+.gd-deroule:hover > .gd-lien { color: var(--texte); }
+.gd-deroule.actif { background: var(--turquoise-voile); }
+.gd-deroule.actif > .gd-lien, .gd-deroule.actif > .gd-ouvrir { color: var(--turquoise-vif); }
+.gd-ouvrir {
+  display: inline-grid; place-items: center; width: 32px; height: 36px; margin: 0; padding: 0 6px 0 0;
+  color: var(--texte-2); cursor: pointer; background: none; border: 0; border-radius: 0 999px 999px 0; transition: color .2s;
+}
+.gd-ouvrir:hover { color: var(--turquoise-vif); }
 .gd-fleche { display: inline-block; font-size: .95rem; line-height: 1; opacity: .7; transition: transform .3s var(--doux); }
-.gd-deroule { position: relative; }
-.gd-deroule > summary { list-style: none; }
-.gd-deroule > summary::-webkit-details-marker { display: none; }
-.gd-deroule[open] .gd-fleche { transform: rotate(180deg); }
+.gd-deroule.ouvert .gd-fleche { transform: rotate(180deg); }
 .gd-panneau {
   position: absolute; top: calc(100% + 10px); right: 0; z-index: 60;
   width: max-content; min-width: 270px; max-width: calc(100vw - 32px);
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 4px; padding: 8px;
+  display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 4px; padding: 8px;
   background: rgba(12, 19, 37, .8);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   backdrop-filter: blur(20px) saturate(150%);
@@ -241,7 +256,14 @@ code {
 .gd-panneau-lien { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 6px 10px 6px 8px; color: var(--texte); border-radius: var(--r-sm); white-space: nowrap; transition: background-color .2s, color .2s; }
 .gd-panneau-lien .icon { border-radius: 7px; }
 .gd-panneau-lien:hover, .gd-panneau-lien.actif { color: var(--turquoise-vif); background: var(--turquoise-voile); text-decoration: none; }
-.gd-panneau-lien .gd-compte { margin-left: auto; }
+.gd-panneau-lien .gd-compte, .gd-panneau-note { margin-left: auto; }
+.gd-panneau-note { padding-left: 14px; font-size: .74rem; color: var(--texte-3); font-variant-numeric: tabular-nums; }
+.gd-panneau.une-colonne { grid-template-columns: minmax(0, 1fr); }
+.gd-panneau::before { content: ""; position: absolute; left: 0; right: 0; top: -12px; height: 12px; }
+.gd-deroule.ouvert > .gd-panneau { display: grid; }
+@media (hover: hover) and (pointer: fine) {
+  .gd-deroule:hover > .gd-panneau { display: grid; }
+}
 
 /* --------------------------------------------------------------------------
    Mise en page
@@ -346,16 +368,17 @@ code {
 a.q-common, a.q-uncommon, a.q-rare, a.q-epic, a.q-poor, a.q-legendary, a.q-artifact { text-decoration: none; }
 a.q-common:hover, a.q-uncommon:hover, a.q-rare:hover, a.q-epic:hover { text-decoration: underline; }
 
-.c-druid { color: var(--c-druid); }
-.c-hunter { color: var(--c-hunter); }
-.c-mage { color: var(--c-mage); }
-.c-paladin { color: var(--c-paladin); }
-.c-priest { color: var(--c-priest); }
-.c-rogue { color: var(--c-rogue); }
-.c-shaman { color: var(--c-shaman); }
-.c-warlock { color: var(--c-warlock); }
-.c-warrior { color: var(--c-warrior); }
-.c-inconnue { color: var(--texte); }
+/* a.c-… : un nom en lien garde la couleur de sa classe au survol (a:hover le passerait au turquoise) */
+.c-druid, a.c-druid { color: var(--c-druid); }
+.c-hunter, a.c-hunter { color: var(--c-hunter); }
+.c-mage, a.c-mage { color: var(--c-mage); }
+.c-paladin, a.c-paladin { color: var(--c-paladin); }
+.c-priest, a.c-priest { color: var(--c-priest); }
+.c-rogue, a.c-rogue { color: var(--c-rogue); }
+.c-shaman, a.c-shaman { color: var(--c-shaman); }
+.c-warlock, a.c-warlock { color: var(--c-warlock); }
+.c-warrior, a.c-warrior { color: var(--c-warrior); }
+.c-inconnue, a.c-inconnue { color: var(--texte); }
 
 /* Les paliers de compétence d'une recette : orange (requise), jaune, vert, gris */
 .rc-paliers { display: inline-flex; align-items: baseline; gap: 7px; font-variant-numeric: tabular-nums; cursor: help; }
@@ -464,6 +487,40 @@ a.q-common:hover, a.q-uncommon:hover, a.q-rare:hover, a.q-epic:hover { text-deco
 @keyframes gd-flotte { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 @keyframes gd-reflet { from { background-position: 100% 0; } to { background-position: 0 0; } }
 
+/* L'accueil de la guilde : la présentation (site.json), quelques chiffres de l'armurerie, les classes en petite barre */
+.gd-hero-presentation { max-width: 640px; margin: 18px auto 0; font-size: 1.02rem; color: var(--texte-2); }
+.gd-hero-presentation + .gd-hero-presentation { margin-top: 8px; }
+.gd-chiffres { max-width: 560px; margin: 30px auto 0; }
+.gd-chiffres-ligne { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 40px; }
+.gd-chiffre { display: inline-flex; flex-direction: column; align-items: center; min-width: 110px; padding: 6px 10px; border-radius: var(--r); transition: background-color .25s; }
+.gd-chiffre:hover { text-decoration: none; background: var(--survol); }
+.gd-chiffre b { font-family: var(--font-title); font-size: 2.4rem; font-weight: 700; line-height: 1; font-variant-numeric: lining-nums tabular-nums; color: var(--or-pale);
+  text-shadow: 0 0 22px rgba(233, 199, 126, .25); }
+.gd-chiffre span { margin-top: 6px; font-size: .7rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--texte-3); transition: color .25s; }
+.gd-chiffre:hover span { color: var(--turquoise); }
+.gd-classes { margin-top: 18px; }
+.gd-classes-barre { display: flex; gap: 2px; height: 8px; overflow: hidden; border-radius: 999px; background: rgba(150, 180, 235, .08); box-shadow: inset 0 1px 1px rgba(0, 0, 0, .4); }
+.gd-classes-barre > span { flex: 1 1 0; min-width: 3px; background: currentColor; }
+.gd-classes-legende { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 4px; margin: 10px 0 0; padding: 0; }
+.gd-classes-legende a { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 9px; font-size: .78rem; color: var(--texte-2); border-radius: 999px; transition: color .2s, background-color .2s; }
+.gd-classes-legende a:hover { color: var(--texte); background: var(--survol); text-decoration: none; }
+.gd-classes-legende b, .gd-pastille b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.gd-classes-legende b { color: var(--texte); }
+/* Un point à la couleur d'une classe (c-…) */
+.gd-rond { flex: none; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+
+/* Les rubriques en grandes tuiles (site.json > rubriques) */
+.gd-rubriques { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); gap: 16px; }
+.gd-rubrique { gap: 6px; padding: 30px 22px 24px; border-radius: var(--r-lg); }
+.gd-rubrique .icon.lg { width: 64px; height: 64px; margin-bottom: 12px; border-radius: 18px; }
+.gd-rubrique .gd-tuile-nom { font-size: 1.8rem; }
+.gd-rubrique-desc { max-width: 300px; font-size: .9rem; line-height: 1.5; color: var(--texte-2); }
+.gd-rubrique-chiffre {
+  margin-top: 10px; padding: 3px 14px; font-size: .78rem; font-weight: 600; letter-spacing: .03em; font-variant-numeric: tabular-nums;
+  color: var(--or-pale); background: rgba(233, 199, 126, .07); border: 1px solid rgba(233, 199, 126, .32); border-radius: 999px;
+}
+.gd-voir { display: inline-flex; align-items: center; min-height: 32px; margin-top: 8px; padding: 0 12px; font-size: .88rem; font-weight: 500; }
+
 /* La grande recherche « Qui sait faire… ? » */
 .gd-cherche {
   display: block; width: 100%; height: 56px; padding: 0 18px 0 52px;
@@ -546,14 +603,33 @@ a.gd-membre:hover, a.gd-qui:hover { background: var(--survol); text-decoration: 
 .gd-recharge.pret { color: var(--ok); background: rgba(110, 231, 168, .08); border-color: rgba(110, 231, 168, .32); }
 .gd-nbrec { flex: none; font-size: .8rem; color: var(--texte-2); white-space: nowrap; }
 
-/* Les dernières nouveautés du carnet */
-.gd-histo { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.gd-histo li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; padding: 9px 12px; border-radius: 10px; }
-.gd-histo li:hover { background: rgba(150, 180, 235, .035); }
-.gd-histo-date { flex: none; min-width: 100px; font-size: .78rem; font-weight: 500; color: var(--texte-3); font-variant-numeric: tabular-nums; }
-.gd-histo-txt { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
-.gd-histo-txt a { font-weight: 600; }
-.gd-badge-neuf { flex: none; padding: 1px 10px; font-size: .72rem; font-weight: 600; color: var(--or-pale); background: rgba(233, 199, 126, .08); border: 1px solid rgba(233, 199, 126, .45); border-radius: 999px; }
+/* Les dernières nouveautés des métiers : une ligne par groupe (un membre, un métier, un jour) : icône du métier, nom, ce qu'il a appris, date ;
+   une recette nouvelle pour la guilde porte le badge doré, et sa ligne un filet d'or à gauche */
+.gd-nouveautes-metiers { scroll-margin-top: 84px; }
+.gd-histo { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.gd-histo-ligne { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 4px 14px; padding: 10px 12px; border-radius: 12px; transition: background-color .2s; }
+.gd-histo-ligne:hover { background: rgba(150, 180, 235, .035); }
+.gd-histo-ligne.neuf { background: linear-gradient(90deg, rgba(233, 199, 126, .07), transparent 65%); }
+.gd-histo-ligne.neuf::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 2px; border-radius: 2px;
+  background: linear-gradient(180deg, var(--or-pale), var(--or)); box-shadow: 0 0 8px rgba(233, 199, 126, .55); }
+.gd-histo-ic { line-height: 0; }
+.gd-histo-ic .icon.md { border-radius: 50%; }
+.gd-histo-corps { min-width: 0; }
+.gd-histo-phrase { margin: 0; line-height: 1.45; color: var(--texte-2); overflow-wrap: anywhere; }
+.gd-histo-qui { font-weight: 600; }
+.gd-histo-recettes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 5px; font-size: .88rem; }
+.gd-histo-rec { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.gd-histo-rec > a { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+.gd-histo-plus {
+  min-height: 26px; padding: 0 10px; font-size: .78rem; font-weight: 600; cursor: pointer;
+  color: var(--turquoise); background: rgba(79, 217, 207, .06); border: 1px dashed rgba(79, 217, 207, .4); border-radius: 999px;
+  transition: color .2s, background-color .2s, border-color .2s;
+}
+.gd-histo-plus:hover { color: var(--turquoise-vif); background: var(--turquoise-voile); border-style: solid; }
+.gd-histo-date { padding-top: 2px; font-size: .78rem; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--texte-3); cursor: default; }
+.gd-histo-vide { margin: 0; padding: 2px 4px; font-size: .9rem; font-style: italic; color: var(--texte-3); }
+.gd-histo-note { margin: 10px 0 0; font-size: .8rem; text-align: center; color: var(--texte-3); }
+.gd-badge-neuf { flex: none; padding: 1px 10px; font-size: .72rem; font-weight: 600; white-space: nowrap; color: var(--or-pale); background: rgba(233, 199, 126, .08); border: 1px solid rgba(233, 199, 126, .45); border-radius: 999px; }
 
 /* Le rang dans un métier : une barre fine, du turquoise vers l'or à mesure qu'on approche du plafond
    (le dégradé couvre toute la piste, 100cqw : un rang bas reste turquoise, un rang au plafond atteint l'or) */
@@ -705,11 +781,93 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
 .lv-seule .lv-nom { font-size: 1.5rem; }
 
 /* --------------------------------------------------------------------------
+   L'en-tête d'une rubrique (Membres, Métiers, Addons) : son icône, son titre, une ligne
+   -------------------------------------------------------------------------- */
+.gd-tete-rubrique { flex-wrap: wrap; gap: 16px 22px; }
+.gd-tete-txt { flex: 1 1 180px; min-width: 0; }
+.gd-tete-rubrique .gd-encart { margin: 0; }
+
+/* --------------------------------------------------------------------------
+   Les membres (data/membres.json, l'armurerie officielle) : recherche, filtres en pastilles, une ligne par membre
+   -------------------------------------------------------------------------- */
+.gd-roster-cadre { margin-top: 22px; }
+.gd-roster-outils { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.gd-membres-cherche { flex: 1 1 240px; max-width: 420px; height: 40px; }
+.gd-roster-compte { margin: 0 0 0 auto; font-size: .84rem; color: var(--texte-3); font-variant-numeric: tabular-nums; }
+.gd-pastilles { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 10px; }
+.gd-pastille {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 13px;
+  font-size: .84rem; font-weight: 500; color: var(--texte-2); cursor: pointer;
+  background: rgba(150, 180, 235, .05); border: 1px solid var(--ligne); border-radius: 999px;
+  transition: color .2s, background-color .2s, border-color .2s, box-shadow .3s;
+}
+.gd-pastille b { font-size: .74rem; color: var(--texte-3); }
+.gd-pastille:hover { color: var(--texte); background: var(--survol); border-color: var(--ligne-forte); }
+.gd-pastille.actif { color: var(--turquoise-vif); background: var(--turquoise-voile); border-color: rgba(79, 217, 207, .45); box-shadow: 0 0 16px -6px rgba(79, 217, 207, .55); }
+.gd-pastille.actif b { color: var(--turquoise); }
+/* « Niveau 60 » : une case qui se coche */
+.gd-bascule::before { content: ""; flex: none; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px currentColor; opacity: .75; }
+.gd-bascule.actif::before { opacity: 1; box-shadow: none;
+  background: var(--turquoise-vif) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2304201f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3.5 8.5 3 3 6-7'/%3E%3C/svg%3E") center / 11px no-repeat; }
+
+/* La liste : un tableau sans en-tête (les colonnes s'alignent d'une ligne à l'autre par subgrid), des cartes sous 980 px */
+.gd-roster {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: minmax(0, 1.3fr) 56px minmax(0, 1.3fr) minmax(0, 1fr) 76px auto; gap: 2px 18px;
+}
+.gd-perso {
+  grid-column: 1 / -1;
+  display: grid; grid-template-columns: minmax(0, 1.3fr) 56px minmax(0, 1.3fr) minmax(0, 1fr) 76px minmax(150px, auto);
+  grid-template-columns: subgrid;
+  align-items: center; column-gap: 18px; min-height: 60px; padding: 8px 12px; border-radius: 12px; transition: background-color .2s;
+}
+.gd-perso:hover { background: var(--survol); }
+.gd-perso-id { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.gd-perso-nom { align-self: flex-start; font-size: 1.02rem; font-weight: 600; overflow-wrap: anywhere; }
+.gd-perso-surnom { font-size: .78rem; color: var(--texte-3); overflow-wrap: anywhere; }
+.gd-perso-chiffre { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.gd-perso-chiffre b { font-family: var(--font-title); font-size: 1.4rem; font-weight: 700; font-variant-numeric: lining-nums tabular-nums; color: var(--ivoire); }
+.gd-perso-chiffre b.muted { color: var(--texte-3); }
+.gd-perso-chiffre small { margin-top: 2px; font-size: .62rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; color: var(--texte-3); }
+.gd-perso-race { display: flex; flex-direction: column; min-width: 0; font-size: .9rem; line-height: 1.3; }
+.gd-perso-race small { font-size: .76rem; color: var(--texte-3); }
+.gd-rang-badge {
+  display: inline-flex; align-items: center; min-height: 24px; padding: 1px 11px; font-size: .76rem; font-weight: 500; line-height: 1.3;
+  color: var(--texte-2); background: rgba(150, 180, 235, .06); border: 1px solid var(--ligne); border-radius: 999px;
+}
+.gd-rang-badge.chef { color: var(--or-pale); background: rgba(233, 199, 126, .08); border-color: rgba(233, 199, 126, .42); }
+.gd-perso-liens { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 12px; }
+.gd-badge-metiers {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 30px; padding: 2px 12px 2px 6px; white-space: nowrap;
+  font-size: .78rem; font-weight: 600; color: var(--turquoise-vif); background: var(--turquoise-voile); border: 1px solid rgba(79, 217, 207, .35); border-radius: 999px;
+  transition: background-color .2s, box-shadow .3s;
+}
+.gd-badge-metiers:hover { color: var(--turquoise-vif); text-decoration: none; background: rgba(79, 217, 207, .2); box-shadow: 0 0 18px -6px rgba(79, 217, 207, .6); }
+.gd-badge-icones { display: inline-flex; }
+.gd-badge-icones .icon { border-radius: 50%; box-shadow: 0 0 0 1.5px var(--nuit-850); }
+.gd-badge-icones .icon + .icon { margin-left: -5px; }
+.gd-officielle { display: inline-flex; align-items: center; min-height: 30px; font-size: .84rem; white-space: nowrap; }
+.gd-ext { font-size: .9em; }
+.gd-roster-vide { grid-column: 1 / -1; padding: 26px 0 8px; text-align: center; color: var(--texte-2); }
+
+/* --------------------------------------------------------------------------
    Un membre
    -------------------------------------------------------------------------- */
 .gd-tete-membre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
 .gd-tete-membre h1 { margin: 0; font-size: 2.7rem; font-weight: 700; overflow-wrap: anywhere; }
 .gd-tete-membre .gd-membre-sous { font-size: .9rem; color: var(--texte-2); }
+.gd-tete-surnom { font-family: var(--font-title); font-size: 1.4rem; font-weight: 600; color: var(--texte-2); overflow-wrap: anywhere; }
+/* Son profil d'après l'armurerie : des cases, et la fiche officielle */
+.gd-profil { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-top: 18px; }
+.gd-faits { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.gd-fait { display: flex; flex-direction: column; min-width: 96px; padding: 8px 14px 9px; background: rgba(150, 180, 235, .045); border: 1px solid var(--ligne); border-radius: 12px; }
+.gd-fait dt { font-size: .64rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--texte-3); }
+.gd-fait dd { margin: 2px 0 0; font-weight: 600; color: var(--texte); font-variant-numeric: tabular-nums; }
+.gd-officielle-btn { flex: none; }
+.gd-homonymes { margin: 14px 0 0; font-size: .86rem; color: var(--texte-2); }
+.gd-homonymes a { font-weight: 600; }
+.gd-pas-partage { margin: 26px 0 0; text-align: center; color: var(--texte-2); }
+.gd-pas-partage a { font-weight: 500; }
 .gd-autres { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 14px; font-size: .88rem; color: var(--texte-2); }
 .gd-autre {
   display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 3px 13px 3px 5px; color: var(--texte);
@@ -737,7 +895,22 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
 .gd-rec-nom { font-size: .92rem; font-weight: 500; overflow-wrap: anywhere; }
 
 /* --------------------------------------------------------------------------
-   L'addon
+   Les addons (site.json > addons) : une carte chacun
+   -------------------------------------------------------------------------- */
+.gd-addons { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr)); gap: 22px; margin-top: 22px; }
+.gd-addon { display: flex; flex-direction: column; }
+.gd-addon-tete { display: flex; align-items: center; gap: 16px; }
+.gd-addon-tete .icon { border-radius: 16px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 0 3px rgba(233, 199, 126, .3), 0 0 26px -6px rgba(79, 217, 207, .5); }
+.gd-addon-txt { min-width: 0; }
+.gd-addon h2 { margin: 0; font-size: 1.75rem; font-weight: 700; overflow-wrap: anywhere; }
+.gd-addon h2 a { color: var(--ivoire); }
+.gd-addon h2 a:hover { color: var(--turquoise-vif); text-decoration: none; }
+.gd-addon .gd-version { margin-top: 2px; }
+.gd-addon-desc { flex: 1; margin: 16px 0 0; color: var(--texte-2); }
+.gd-addon-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+/* --------------------------------------------------------------------------
+   L'addon des métiers
    -------------------------------------------------------------------------- */
 /* En toute transparence : ce qu'il partage, ce qu'il ne fait jamais (addon/LISEZMOI.txt) */
 .gd-pourquoi { max-width: 760px; margin: 0 auto 20px; text-align: center; color: var(--texte-2); }
@@ -795,6 +968,22 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
 /* --------------------------------------------------------------------------
    Tablette et téléphone
    -------------------------------------------------------------------------- */
+/* Les membres en cartes : nom et niveau, race et niveau d'objet, rang et liens */
+@media (max-width: 980px) {
+  .gd-roster { grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 8px; }
+  .gd-perso {
+    grid-column: auto; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "id id niv" "race race ilvl" "rang liens liens";
+    gap: 8px 12px; padding: 12px 14px; background: rgba(150, 180, 235, .035); border: 1px solid var(--ligne);
+  }
+  .gd-perso-id { grid-area: id; }
+  .gd-perso-niv { grid-area: niv; }
+  .gd-perso-race { grid-area: race; }
+  .gd-perso-ilvl { grid-area: ilvl; }
+  .gd-perso-rang { grid-area: rang; }
+  .gd-perso-liens { grid-area: liens; }
+  .gd-perso-chiffre { align-items: flex-end; }
+  .gd-perso-rang:empty + .gd-perso-chiffre + .gd-perso-liens { grid-column: 1 / -1; }
+}
 @media (max-width: 900px) {
   .gd-menu { position: relative; }
   .gd-metier { grid-template-columns: 1fr; }
@@ -808,15 +997,33 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
   .gd-marque { justify-content: center; width: 100%; }
   .gd-nav { justify-content: center; }
   .gd-lien { padding: 0 14px; font-size: .88rem; }
+  .gd-deroule > .gd-lien { padding-right: 2px; }
   .gd-deroule { position: static; }
   .gd-panneau { left: 12px; right: 12px; top: calc(100% + 6px); width: auto; min-width: 0; max-width: none; }
   .gd-panneau-lien { white-space: normal; line-height: 1.2; }
   .gd-vue { padding: 22px 16px 56px; }
   @media (max-width: 480px) { .gd-panneau { grid-template-columns: 1fr; } }
+  /* Les quatre entrées du menu sur une seule ligne à 375 px */
+  @media (max-width: 420px) {
+    .gd-nav { gap: 2px; }
+    .gd-lien { padding: 0 9px; font-size: .84rem; }
+    .gd-deroule > .gd-lien { padding-right: 0; }
+    .gd-ouvrir { padding-right: 2px; }
+  }
   .frame { padding: 20px 16px 18px; border-radius: 18px; }
   .frame-title { font-size: 1.35rem; }
   .gd-hero { margin-bottom: 30px; }
-  .gd-hero-guilde { padding-left: .26em; font-size: .7rem; letter-spacing: .26em; }
+  .gd-hero-guilde { padding-left: .2em; font-size: .7rem; letter-spacing: .2em; line-height: 1.8; }
+  .gd-chiffres-ligne { gap: 4px 18px; }
+  .gd-chiffre b { font-size: 2.1rem; }
+  .gd-rubrique { padding: 24px 18px 20px; }
+  .gd-rubrique .gd-tuile-nom { font-size: 1.6rem; }
+  .gd-tete-membre .gd-tete-surnom { font-size: 1.2rem; }
+  .gd-profil { margin-top: 14px; }
+  .gd-fait { flex: 1 1 calc(50% - 4px); min-width: 0; }
+  .gd-officielle-btn { width: 100%; }
+  .gd-roster-compte { margin-left: 0; }
+  .gd-addon h2 { font-size: 1.5rem; }
   .gd-tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .gd-tuile { padding: 18px 8px 14px; }
   .gd-tuile .icon.lg { width: 48px; height: 48px; border-radius: 14px; }
@@ -827,7 +1034,8 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
   .gd-rec { flex-wrap: wrap; }
   .gd-rec .gd-res-qui { padding-left: 34px; }
   .gd-transp, .gd-points { grid-template-columns: 1fr; }
-  .gd-histo-date { min-width: 0; width: 100%; }
+  .gd-histo-ligne { grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; padding: 10px 8px 10px 10px; }
+  .gd-histo-date { grid-column: 2; padding-top: 0; }
   .gd-tete-membre h1, .gd-tete-metier h1 { font-size: 2.1rem; }
   .gd-tete-metier { gap: 16px; }
   .gd-tete-metier .icon.xl { width: 58px; height: 58px; border-radius: 16px; }
@@ -851,8 +1059,15 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
 @media (pointer: coarse) {
   .lv-rec, .lv-cat { min-height: 40px; }
   .gd-puce { min-height: 34px; }
+  .gd-classes-legende a, .gd-officielle, .gd-badge-metiers, .gd-voir { min-height: 34px; }
+  .gd-histo-rec > a, .gd-histo-plus { min-height: 32px; }
+  .gd-histo-plus { min-width: 40px; }
+  .gd-perso-nom { display: inline-flex; align-items: center; min-width: 32px; min-height: 32px; }
+  /* Un composant cherché dans Métiers : son icône et son nom mènent à Wowhead */
+  .gd-res-comp .gd-res-ic { display: inline-grid; place-items: center; min-width: 32px; min-height: 32px; margin: -5px; }
+  .gd-res-comp .gd-res-nom { align-self: flex-start; padding-block: 5px; margin-block: -5px; }
   /* Les liens dans le texte : un remplissage vertical qui agrandit la cible sans écarter les lignes */
-  .gd-fil a, .gd-pied a, .gd-histo-txt a, .lv-comp-nom a, .lv-nom a { padding-block: 8px; }
+  .gd-fil a, .gd-pied a, .gd-histo-qui, .lv-comp-nom a, .lv-nom a, .gd-homonymes a, .gd-pas-partage a, .gd-addon h2 a { padding-block: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
