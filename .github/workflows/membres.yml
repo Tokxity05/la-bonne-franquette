@@ -30,7 +30,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/membres.json
+          git add data/*.json  # membres.json et equipement.json (un fichier absent ne fait pas échouer)
           if git diff --cached --quiet; then echo "Rien de changé."; exit 0; fi
           git commit -m "Membres : mise à jour depuis l'armurerie"
           # le site a pu être publié pendant la relecture (le grimoire envoie ses fichiers un à un) : on se remet à niveau avant d'envoyer
