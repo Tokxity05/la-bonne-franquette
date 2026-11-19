@@ -549,7 +549,7 @@ a.gd-res:hover, .gd-res:hover { background: var(--survol); text-decoration: none
 .gd-res-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
 .gd-res-nom { font-weight: 600; overflow-wrap: anywhere; }
 .gd-res-ligne { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
-/* « nouveau » : une recette apparue dans le carnet depuis moins de 7 jours */
+/* « nouveau » : une recette apparue dans le carnet depuis moins de 2 jours */
 .gd-neuf {
   flex: none; display: inline-block; padding: 1px 7px; font-size: .62rem; font-weight: 700; line-height: 1.5; letter-spacing: .08em; text-transform: uppercase;
   color: #2a1d05; background: linear-gradient(180deg, var(--or-pale), var(--or)); border-radius: 999px; box-shadow: 0 0 12px -2px rgba(233, 199, 126, .55);
@@ -606,6 +606,24 @@ a.gd-membre:hover, a.gd-qui:hover { background: var(--survol); text-decoration: 
 /* Les dernières nouveautés des métiers : une ligne par groupe (un membre, un métier, un jour) : icône du métier, nom, ce qu'il a appris, date ;
    une recette nouvelle pour la guilde porte le badge doré, et sa ligne un filet d'or à gauche */
 .gd-nouveautes-metiers { scroll-margin-top: 84px; }
+/* L'équipement d'un membre (20/11) : deux colonnes comme l'armurerie, les armes dessous */
+.gd-equipement { margin-top: 16px; }
+.gd-eq-tete { margin: 0 0 10px; font-size: .85rem; color: var(--texte-3); }
+.gd-eq-tete b { color: var(--texte); }
+.gd-eq-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 24px; }
+.gd-eq-col { display: grid; gap: 2px; align-content: start; }
+.gd-eq-armes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 24px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--ligne); }
+.gd-eq { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; min-height: 46px; padding: 5px 8px; border-radius: 10px; transition: background-color .2s; }
+.gd-eq:hover { background: var(--survol); }
+.gd-eq.vide { opacity: .55; }
+.gd-eq-ic { line-height: 0; }
+.gd-eq-trou { display: inline-block; width: 32px; height: 32px; border: 1px dashed var(--ligne-forte); border-radius: 8px; }
+.gd-eq-txt { min-width: 0; display: grid; gap: 1px; line-height: 1.3; }
+.gd-eq-nom { font-size: .92rem; font-weight: 600; overflow-wrap: anywhere; }
+.gd-eq-sous { font-size: .76rem; color: var(--texte-3); }
+.gd-eq-ench { font-size: .78rem; color: var(--q-uncommon); }
+@media (max-width: 700px) { .gd-eq-grille, .gd-eq-armes { grid-template-columns: minmax(0, 1fr); } }
+
 /* Les nouveautés en lignes simples (20/11) : une par ligne, la date à droite */
 .gd-nv-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .gd-nv { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 7px 10px; border-radius: 10px; transition: background-color .2s; }
