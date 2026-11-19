@@ -311,6 +311,8 @@
   }
   // Un fichier à télécharger : un .zip du site, en chemin relatif, sans remontée
   const fichierSur = (f) => (typeof f === "string" && /^[\w.-]+(\/[\w.-]+)*\.zip$/i.test(f) && !f.includes("..") ? f : null);
+  // La page CurseForge d'un addon (site.json > addons[].curseforge, projet non répertorié : seuls ceux qui ont le lien le trouvent)
+  const curseforgeSur = (u) => (typeof u === "string" && /^https:\/\/(www\.)?curseforge\.com\/[\w\/.-]+$/.test(u.trim()) ? u.trim() : null);
   // Un addon : son entrée de site.json (le nom affiché vient d'elle) ; pour Métiers LBF, data/guilde.json > addon (écrit avec le zip)
   // passe devant pour le fichier, la version et les nouveautés
   function infoAddon(id = ADDON_METIERS) {
@@ -318,9 +320,11 @@
     if (!a) return null;
     const G = id === ADDON_METIERS && ADDON ? ADDON : {};
     const nouveautes = Array.isArray(G.nouveautes) ? G.nouveautes : Array.isArray(a.nouveautes) ? a.nouveautes : [];
+    // Sur CurseForge (19/11, Melvin) : on l'installe et on le met à jour depuis l'appli CurseForge, le site ne propose plus le zip
+    const curseforge = curseforgeSur(a.curseforge);
     return { id, nom: a.nom || (typeof G.nom === "string" && G.nom.trim()) || NOM_ADDON_METIERS, icone: a.icone || "inv_misc_book_11", desc: a.desc || null,
-      version: G.version || a.version ? String(G.version || a.version) : null, maj: G.maj || a.maj || null,
-      fichier: fichierSur(G.fichier) || fichierSur(a.fichier) || (id === ADDON_METIERS ? ZIP_DEFAUT : null),
+      version: G.version || a.version ? String(G.version || a.version) : null, maj: G.maj || a.maj || null, curseforge,
+      fichier: curseforge ? null : fichierSur(G.fichier) || fichierSur(a.fichier) || (id === ADDON_METIERS ? ZIP_DEFAUT : null),
       nouveautes: nouveautes.filter((n) => n && (n.texte || n.version)) };
   }
   const lienAddon = (id) => `#/addons/${encodeURIComponent(id)}`;
@@ -620,7 +624,7 @@
   // L'encart de l'addon des métiers : son nom, sa version, le lien vers sa page
   function encartAddon() {
     const A = infoAddon();
-    return A ? h("a", { class: "gd-encart", href: lienAddon(A.id) }, icone(A.icone, "sm"), h("b", {}, A.version ? `${A.nom} ${A.version}` : A.nom), h("span", {}, "· Télécharger")) : null;
+    return A ? h("a", { class: "gd-encart", href: lienAddon(A.id) }, icone(A.icone, "sm"), h("b", {}, A.version ? `${A.nom} ${A.version}` : A.nom), h("span", {}, A.curseforge ? "· Installer" : "· Télécharger")) : null;
   }
   const ICONE_ENVOI = "inv_letter_15";
   const encartEnvoi = () => (CFG.service ? h("a", { class: "gd-encart", href: "#/metiers/envoyer" }, icone(ICONE_ENVOI, "sm"), h("b", {}, "Envoyer mes métiers"), h("span", {}, "· Ton code")) : null);
@@ -632,7 +636,7 @@
         ? "Les métiers de la guilde n'ont pas pu être lus. Réessaie dans un instant."
         : `Aucun membre n'a encore partagé ses métiers. Installe l'addon ${nomAddonMetiers()} et ouvre une fois chacun de tes métiers en jeu : le carnet se remplira au prochain relais.`;
     return h("div", { class: "stack" }, cadre("Le carnet est encore vide", h("div", { class: "gd-vide" }, h("p", {}, texte),
-      h("div", { class: "gd-docs" }, h("a", { class: "btn", href: lienAddon(ADDON_METIERS) }, "Télécharger l'addon"),
+      h("div", { class: "gd-docs" }, h("a", { class: "btn", href: lienAddon(ADDON_METIERS) }, (infoAddon() || {}).curseforge ? "Installer l'addon" : "Télécharger l'addon"),
         CFG.service ? h("a", { class: "btn ghost", href: "#/metiers/envoyer" }, "Envoyer mes métiers") : null))));
   }
   // 989 · Par emplacement : les pièces que la guilde sait fabriquer et ce qu'elle sait poser dessus (enchantements, renforts, lunettes)
@@ -1136,6 +1140,15 @@
   // Le téléchargement d'un addon : le bouton, la version et sa date, une ligne
   function blocTelecharger(A, texte) {
     const date = A.version && A.maj ? dateLongue(A.maj) : null;
+    if (A.curseforge) {
+      return cadre("Installer", h("div", { class: "gd-telecharger" },
+        h("a", { class: "btn gd-gros-bouton", href: A.curseforge, target: "_blank", rel: "noopener" }, icone(A.icone, "md"), "Installer avec CurseForge"),
+        A.version ? h("p", { class: "gd-version" }, "Version ", h("b", {}, A.version), date ? ` · ${date}` : null) : null,
+        h("ol", { class: "gd-etapes-cf" },
+          h("li", {}, "Ouvre la page de l'addon sur CurseForge et clique sur ", h("b", {}, "Installer"), " : l'appli CurseForge l'ajoute à ton jeu (WoW Forever)."),
+          h("li", {}, "Les mises à jour arrivent ensuite d'elles-mêmes dans l'appli, comme pour tes autres addons.")),
+        h("p", { class: "gd-texte muted" }, "La page n'apparaît pas dans la recherche de CurseForge : seuls ceux qui ont ce lien la trouvent.", texte ? ` ${texte}` : null)));
+    }
     return cadre("Télécharger", h("div", { class: "gd-telecharger" },
       A.fichier ? h("a", { class: "btn gd-gros-bouton", href: A.fichier, download: "" }, icone(A.icone, "md"), "Télécharger l'addon")
         : h("p", { class: "muted" }, "Pas encore de fichier à télécharger."),
@@ -1162,7 +1175,8 @@
         h("div", { class: "gd-addon-tete" }, icone(A.icone, "lg"), h("div", { class: "gd-addon-txt" }, h("h2", {}, h("a", { href: lienAddon(A.id) }, A.nom)),
           A.version ? h("p", { class: "gd-version" }, "Version ", h("b", {}, A.version), date ? ` · ${date}` : null) : null)),
         A.desc ? h("p", { class: "gd-addon-desc" }, A.desc) : null,
-        h("div", { class: "gd-addon-actions" }, A.fichier ? h("a", { class: "btn", href: A.fichier, download: "" }, "Télécharger") : null,
+        h("div", { class: "gd-addon-actions" }, A.curseforge ? h("a", { class: "btn", href: A.curseforge, target: "_blank", rel: "noopener" }, "Installer avec CurseForge")
+          : A.fichier ? h("a", { class: "btn", href: A.fichier, download: "" }, "Télécharger") : null,
           h("a", { class: "btn ghost", href: lienAddon(A.id) }, "En savoir plus ›")));
     })));
   }
@@ -1209,7 +1223,8 @@
             point("Il ne ralentit pas le jeu", h("p", {}, "Rien en continu : une lecture quand tu ouvres une fenêtre de métier, et l'envoi de ta fiche à la connexion ou quand tu apprends une recette, en quelques petits messages espacés.")),
             point("Tu restes maître", h("p", {}, "Un bouton rond près de la mini-carte montre que l'addon tourne : au survol, ce qui est partagé et si le partage est actif ; clic droit pour le mettre en pause (l'icône devient grise)."), h("p", {}, h("code", {}, "/lbf pause"), " : plus rien ne part, et ta fiche s'efface chez les autres. ", h("code", {}, "/lbf reprendre"), " relance le partage."),
               h("p", {}, "Pour que tes métiers disparaissent aussi du site, mets l'addon en pause et préviens un officier. Personne n'est obligé de l'installer.")),
-            point("Vérifier par toi-même", h("p", {}, "Le code est en clair : tu peux le lire ici, ou dans le zip avec le Bloc-notes."),
+            point("Vérifier par toi-même", h("p", {}, A.curseforge ? "Le code est en clair : tu peux le lire ici, ou dans le dossier de l'addon avec le Bloc-notes."
+              : "Le code est en clair : tu peux le lire ici, ou dans le zip avec le Bloc-notes."),
               h("div", { class: "gd-docs" }, doc("addon/LISEZMOI.txt", "Lire le LISEZMOI"), doc("addon/MetierLBF.lua.txt", "Lire le code de l'addon"))))),
         // Melvin (18/11) : « les gens savent installer un addon » ; reste la seule chose propre à celui-ci
         blocTelecharger(A, "Une fois installé, ouvre une fois chacun de tes métiers : c'est tout."),
