@@ -228,13 +228,17 @@
       for (const c of (mt && mt.categories) || []) for (const id of c.recettes || []) if (!IX.categorie.has(String(id))) IX.categorie.set(String(id), { cle, nom: c.nom });
     }
     for (const [id, r] of Object.entries(D.recettes)) for (const [cid] of r.co || []) pousser(IX.dansRecettes, String(cid), id);
-    // L'historique (le plus récent en tête) : les recettes apparues depuis moins de 7 jours portent « nouveau »
+    // L'historique (le plus récent en tête) : les recettes apparues depuis moins de 2 jours portent « nouveau » (20/11, Melvin : « 2 jours max »)
     D.historique = (Array.isArray(d.historique) ? d.historique : []).filter((e) => e && typeof e.qui === "string" && (e.type === "arrivee" || e.type === "recette"));
-    IX.nouvelles = new Set();      // recettes apparues dans la guilde depuis moins de 7 jours
-    IX.nouvellesDe = new Set();    // « membre\nrecette » : ce qu'un membre a appris depuis moins de 7 jours
+    IX.nouvelles = new Set();      // recettes apparues dans la guilde depuis moins de 2 jours
+    IX.nouvellesDe = new Set();    // « membre\nrecette » : ce qu'un membre a appris depuis moins de 2 jours
+    // 20/11 : les recettes avec lesquelles un membre arrive dans le carnet (le jour de son arrivée) ne sont pas « nouvelles » : il les savait
+    // peut-être depuis longtemps ; seules celles qu'il apprend ensuite le sont
+    const arrivees = new Set(D.historique.filter((e) => e.type === "arrivee").map((e) => `${e.qui}\n${String(e.date || "").slice(0, 10)}`));
     for (const e of D.historique) {
       const d7 = dateDe(e.date);
-      if (e.type !== "recette" || e.r == null || !d7 || Date.now() - d7.getTime() > 7 * 864e5) continue;
+      if (e.type !== "recette" || e.r == null || !d7 || Date.now() - d7.getTime() > 2 * 864e5) continue;
+      if (arrivees.has(`${e.qui}\n${String(e.date || "").slice(0, 10)}`)) continue;
       IX.nouvelles.add(String(e.r));
       IX.nouvellesDe.add(`${e.qui}\n${e.r}`);
     }
@@ -293,10 +297,10 @@
     return h("span", { class: "gd-metiers-mini" }, m.metiers.map((x) => h("span", { class: "gd-mini-metier", title: `${nomMetier(x.cle)}${x.rang != null ? ` : ${x.rang}/${x.max || "?"}` : ""}` },
       icone(iconeMetier(x.cle), "xs"), x.rang != null ? x.rang : "?")));
   }
-  // « nouveau » : une recette apparue dans l'historique depuis moins de 7 jours (sur la page d'un membre : apprise par lui)
+  // « nouveau » : une recette apparue dans l'historique depuis moins de 2 jours (sur la page d'un membre : apprise par lui)
   function pastille(id, membre) {
     const neuve = membre ? IX.nouvellesDe.has(`${membre.nom}\n${id}`) : IX.nouvelles.has(String(id));
-    return neuve ? h("span", { class: "gd-neuf", title: membre ? "Apprise depuis moins de 7 jours" : "Apparue dans le carnet depuis moins de 7 jours" }, "nouveau") : null;
+    return neuve ? h("span", { class: "gd-neuf", title: membre ? "Apprise depuis moins de 2 jours" : "Apparue dans le carnet depuis moins de 2 jours" }, "nouveau") : null;
   }
   // Les noms de ceux qui savent la faire, à la couleur de leur classe : les premiers, puis « et N autres »
   function nomsQui(qui, max = 3) {
@@ -921,6 +925,51 @@
     const x = L.find((p) => p.partage) || L[0];
     return { p: x.horsArmurerie ? null : x, m: x.partage || null, homonymes: L.filter((p) => p !== x) };
   }
+  // ---------------------------------------------------------------- L'équipement d'un membre (data/equipement.json, robot des Membres)
+  const EQ_GAUCHE = ["HEAD", "NECK", "SHOULDER", "BACK", "CHEST", "SHIRT", "TABARD", "WRIST"];
+  const EQ_DROITE = ["HANDS", "WAIST", "LEGS", "FEET", "FINGER_1", "FINGER_2", "TRINKET_1", "TRINKET_2"];
+  const EQ_ARMES = ["MAIN_HAND", "OFF_HAND", "RANGED"];
+  const EQ_NOMS = { HEAD: "Tête", NECK: "Cou", SHOULDER: "Épaules", BACK: "Dos", CHEST: "Torse", SHIRT: "Chemise", TABARD: "Tabard", WRIST: "Poignets",
+    HANDS: "Mains", WAIST: "Taille", LEGS: "Jambes", FEET: "Pieds", FINGER_1: "Doigt", FINGER_2: "Doigt", TRINKET_1: "Bijou", TRINKET_2: "Bijou",
+    MAIN_HAND: "Main droite", OFF_HAND: "Main gauche", RANGED: "À distance" };
+  let EQUIPEMENT = null;
+  const chargerEquipement = () => (EQUIPEMENT = EQUIPEMENT || lire("data/equipement.json").catch(() => null));
+  // La clé d'un perso dans equipement.json : son adresse sur l'armurerie (« levieuxpala-titøu »)
+  const adresseDe = (p) => p.adresse || (p.armurerie ? decodeURIComponent(String(p.armurerie).split("/").pop() || "") : null);
+  function caseEquipement(x, slot, region) {
+    if (!x) return h("div", { class: "gd-eq vide" }, h("span", { class: "gd-eq-ic gd-eq-trou", "aria-hidden": "true" }), h("span", { class: "gd-eq-sous" }, EQ_NOMS[slot] || slot));
+    const q = qualite(x.q);
+    const ic = x.i ? h("img", { class: `icon md qb-${q}`, src: `https://render.worldofwarcraft.com/forever-${region || "eu"}/icons/56/${encodeURIComponent(x.i)}.jpg`, alt: "",
+      loading: "lazy", decoding: "async", onerror() { this.replaceWith(icone(null, "md", q)); } }) : icone(null, "md", q);
+    return h("div", { class: "gd-eq" },
+      lienWh("item", x.id, ic, "gd-eq-ic"),
+      h("div", { class: "gd-eq-txt" },
+        lienWh("item", x.id, x.n || `Objet ${x.id}`, `gd-eq-nom q-${q}`),
+        h("span", { class: "gd-eq-sous" }, [x.l ? `Niv. ${x.l}` : null, x.t || EQ_NOMS[slot]].filter(Boolean).join(" · ")),
+        (x.e || []).map((e) => h("span", { class: "gd-eq-ench" }, e))));
+  }
+  function blocEquipement(p) {
+    const corps = h("div", { class: "gd-eq-corps" }, h("p", { class: "gd-eq-tete" }, "Lecture de l'équipement…"));
+    const bloc = cadre("Équipement", corps);
+    bloc.classList.add("gd-equipement");
+    chargerEquipement().then((E) => {
+      const e = E && E.persos && E.persos[adresseDe(p)];
+      if (!e || !Array.isArray(e.pieces) || !e.pieces.length) {
+        fill(corps, h("p", { class: "gd-eq-tete" }, "Pas encore relu : le site lit l'équipement des membres sur l'armurerie officielle, quelques-uns à chaque heure."));
+        return;
+      }
+      const par = new Map(e.pieces.map((x) => [x.s, x]));
+      const col = (L) => h("div", { class: "gd-eq-col" }, L.map((s) => caseEquipement(par.get(s), s, E.region)));
+      const lu = e.lu ? quand(new Date(e.lu * 1000).toISOString()) : null;
+      fill(corps,
+        h("p", { class: "gd-eq-tete" }, e.ilvl != null ? ["Niveau d'objet moyen ", h("b", {}, String(e.ilvl))] : null, lu ? ` · relu sur l'armurerie ${lu}` : null),
+        h("div", { class: "gd-eq-grille" }, col(EQ_GAUCHE), col(EQ_DROITE)),
+        h("div", { class: "gd-eq-armes" }, EQ_ARMES.map((s) => caseEquipement(par.get(s), s, E.region))));
+      infobulles();
+    });
+    return bloc;
+  }
+
   function pageMembre(params) {
     const cle = params[0] || "";
     const t = trouverMembre(cle);
@@ -953,6 +1002,8 @@
         autres.length ? h("div", { class: "gd-autres" }, h("span", {}, artisanat.length ? "Ses autres métiers :" : "Ses métiers :"), autres.map((x) => h("a", { class: "gd-autre", href: `#/metier/${encodeURIComponent(x.cle)}` },
           icone(iconeMetier(x.cle), "sm"), nomMetier(x.cle), h("i", {}, x.rang != null ? `${x.rang}/${x.max || "?"}` : "rang inconnu"),
           RECOLTE.has(x.cle) ? null : h("i", {}, "· recettes pas encore relevées")))) : null));
+    // 20/11 : son équipement, lu sur l'armurerie officielle (un membre de l'armurerie seulement)
+    if (p && p.armurerie) vue.append(blocEquipement(p));
     if (!m) {
       vue.append(h("p", { class: "gd-pas-partage" }, ERREUR === "lecture" || ERREUR === "fichier" ? "Les métiers de la guilde n'ont pas pu être lus pour l'instant."
         : ["Il ne partage pas encore ses métiers : ", h("a", { href: lienAddon(ADDON_METIERS) }, `l'addon ${nomAddonMetiers()} ›`)]));
