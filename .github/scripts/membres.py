@@ -128,7 +128,11 @@ def maj_equipement(membres):
 
 
 def main():
-    membres = roster()
+    try:
+        membres = roster()
+    except Exception as err:  # l'armurerie ne répond pas ou a changé : on réessaiera au prochain passage, sans faire échouer le robot
+        print(f"::warning::Armurerie injoignable ({type(err).__name__} : {err}) : rien de changé, on réessaiera.")
+        return 0
     if not membres:
         print("Liste vide : rien d'écrit.")
         return 0
@@ -141,7 +145,10 @@ def main():
         SORTIE.parent.mkdir(parents=True, exist_ok=True)
         SORTIE.write_text(json.dumps(d, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         print(f"{len(membres)} membres écrits.")
-    maj_equipement(membres)
+    try:
+        maj_equipement(membres)
+    except Exception as err:
+        print(f"::warning::Équipement non relu ({type(err).__name__} : {err}) : on réessaiera.")
     return 0
 
 
