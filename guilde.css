@@ -929,6 +929,7 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
 .gd-docs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 
 .gd-telecharger { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 24px; padding: 6px 0 2px; text-align: center; }
+.gd-etapes-cf { margin: 6px 0 0; padding-left: 1.3em; color: var(--texte-2); text-align: left; display: grid; gap: 4px; }
 .gd-gros-bouton { min-height: 54px; padding: 0 28px 0 10px; font-size: 1.04rem; }
 .gd-gros-bouton .icon { border-radius: 50%; box-shadow: 0 0 0 2px rgba(4, 32, 31, .35); }
 .gd-version { margin: 0; font-size: .9rem; color: var(--texte-2); }
