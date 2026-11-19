@@ -777,6 +777,7 @@
       // à Forever (fv, à partir de nouveautes.foreverMin : pas les babioles de départ) ou BiS pour au moins une spé (bis : pièce des listes
       // pré-raid et raid, ou enchantement conseillé ; guilde.py > recettes_bis)
       const rc = id ? D.recettes[id] : null;
+      if (id && !rc) continue;  // une recette que le carnet ne sait pas nommer n'est pas une nouveauté lisible
       if (rc && rc.s != null && rc.s < CFG.nouveautesMin && !rc.bis && !(rc.fv && rc.s >= CFG.nouveautesForeverMin)) continue;
       const m = e.m || (id && D.recettes[id] ? D.recettes[id].m : null);
       const cle = `${jour}\n${e.qui}\n${m}`;
@@ -1378,6 +1379,15 @@
     const oublies = new Set(Object.keys(oublis).filter((nom) => !neuves.some((f) => f.nom === nom) && parNom.has(nom)
       && (dateDe(parNom.get(nom).maj) || 0) <= (dateDe(oublis[nom]) || 0)));
     if (!neuves.length && !oublies.size) return false;
+    // Une recette apprise ne s'oublie pas : la fiche du relais garde les recettes que le carnet connaissait dans les mêmes métiers
+    for (const f of neuves) {
+      const a = parNom.get(f.nom);
+      for (const x of a ? f.metiers : []) {
+        const avant = ((a.metiers || []).find((y) => y.cle === x.cle) || {}).recettes || [];
+        const vues = new Set(x.recettes);
+        x.recettes = [...x.recettes, ...avant.map(String).filter((id) => !vues.has(id))];
+      }
+    }
     const membres = base.filter((m) => !oublies.has(m.nom) && !neuves.some((f) => f.nom === m.nom)).concat(neuves);
     const recettes = { ...(D ? D.recettes : {}) }, composants = { ...(D ? D.composants : {}) }, metiers = { ...(D ? D.metiers : {}) };
     let cat = null;
