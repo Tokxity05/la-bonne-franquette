@@ -742,7 +742,7 @@
     const titre = rubrique("metiers").titre;
     setTitre(titre);
     if (!D) { vue.append(fil(h("span", {}, titre)), enteteRubrique("metiers", rubrique("metiers").desc, encartAddon(), encartEnvoi()), carnetVide()); return; }
-    const nouveautes = blocNouveautes("Les dernières nouveautés", 10, null, 10);
+    const nouveautes = blocNouveautes("Les dernières nouveautés", 5, null, 10);
     const nRec = IX.recherche.recettes.length;
     const resume = [pl(D.membres.length, "membre"), `${nRec} recette${nRec > 1 ? "s" : ""} connue${nRec > 1 ? "s" : ""}`, D.maj && quand(D.maj) ? `mis à jour ${quand(D.maj)}` : null].filter(Boolean).join(", ");
     const metiers = listeMetiers();
