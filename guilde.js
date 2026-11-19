@@ -422,7 +422,7 @@
   const nomClasse = (c) => CLASSES[c] || "Classe inconnue";
   function pageAccueil() {
     setTitre(null);
-    const nouveautes = D || ERREUR === "vide" ? blocNouveautes("Dernières nouveautés des métiers", 6, "#/metiers?voir=nouveautes", true) : null;
+    const nouveautes = D || ERREUR === "vide" ? blocNouveautes("Dernières nouveautés des métiers", 5, "#/metiers?voir=nouveautes") : null;
     vue.append(
       h("div", { class: "gd-hero" }, logoHero(), h("h1", {}, CFG.nom), CFG.accroche ? h("p", { class: "gd-hero-guilde" }, CFG.accroche) : null,
         h("div", { class: "gd-separateur", "aria-hidden": "true" }),
@@ -742,7 +742,7 @@
     const titre = rubrique("metiers").titre;
     setTitre(titre);
     if (!D) { vue.append(fil(h("span", {}, titre)), enteteRubrique("metiers", rubrique("metiers").desc, encartAddon(), encartEnvoi()), carnetVide()); return; }
-    const nouveautes = blocNouveautes("Les dernières nouveautés", 30);
+    const nouveautes = blocNouveautes("Les dernières nouveautés", 10, null, 10);
     const nRec = IX.recherche.recettes.length;
     const resume = [pl(D.membres.length, "membre"), `${nRec} recette${nRec > 1 ? "s" : ""} connue${nRec > 1 ? "s" : ""}`, D.maj && quand(D.maj) ? `mis à jour ${quand(D.maj)}` : null].filter(Boolean).join(", ");
     const metiers = listeMetiers();
@@ -803,8 +803,6 @@
   }
   const fDateComplete = new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const dateComplete = (jour) => (jour ? majuscule(jourFr(fDateComplete, new Date(`${jour}T12:00:00Z`))) : null);
-  // « d'Enchantement », « de Couture »
-  const deMetier = (nom) => (/^[aeiouyàâäéèêëîïôöùûüh]/i.test(nom) ? `d'${nom}` : `de ${nom}`);
   // Un nom de l'historique : le membre qui partage ses métiers, sinon celui de l'armurerie s'il n'y en a qu'un de ce nom
   function membreDe(nom) {
     const m = D && D.membres.find((x) => x.nom === nom);
@@ -812,77 +810,71 @@
     const L = R ? R.membres.filter((p) => p.nom === nom) : [];
     return L.length === 1 ? L[0] : null;
   }
-  function ligneHistorique(g) {
-    const x = membreDe(g.qui);
-    const qui = x ? h("a", { class: `gd-histo-qui ${classeCss(x)}`, href: lienMembre(x) }, g.qui) : h("b", { class: "gd-histo-qui" }, g.qui);
-    const date = h("time", { class: "gd-histo-date", datetime: g.jour, title: dateComplete(g.jour) }, ilYa(g.jour));
-    if (g.type === "arrivee") {
-      const ic = x && Array.isArray(x.metiers) && x.metiers.length ? iconeMetier(x.metiers[0].cle) : "inv_misc_book_11";
-      return h("li", { class: "gd-histo-ligne arrivee" }, h("span", { class: "gd-histo-ic" }, icone(ic, "md")),
-        h("div", { class: "gd-histo-corps" }, h("p", { class: "gd-histo-phrase" }, qui, " partage maintenant ses métiers")), date);
+  // Les nouveautés en lignes simples (20/11, Melvin : « max 5 lignes, et pas par personnage ») : une recette par ligne (icône, nom, métier,
+  // qui l'a apprise, « Nouveau » si personne ne la savait), une arrivée « X partage maintenant ses métiers » ; la même recette apprise le même
+  // jour par deux membres tient sur une ligne. Chaque jour, une ligne par membre d'abord (un nouveau venu et ses 40 recettes ne remplissent pas
+  // tout), puis les nouvelles pour la guilde, puis les plus hautes.
+  function lignesNouveautes() {
+    const L = [], parCle = new Map();
+    for (const g of groupesHistorique()) {
+      if (g.type === "arrivee") { L.push({ type: "arrivee", jour: g.jour, qui: [g.qui] }); continue; }
+      for (const r of g.recettes) {
+        if (!r.id || !D.recettes[r.id]) continue;
+        const cle = `${g.jour}\n${r.id}`;
+        const x = parCle.get(cle);
+        if (x) { if (!x.qui.includes(g.qui)) x.qui.push(g.qui); x.neuf = x.neuf || r.neuf; continue; }
+        const l = { type: "recette", jour: g.jour, id: r.id, m: g.m, qui: [g.qui], neuf: r.neuf };
+        parCle.set(cle, l);
+        L.push(l);
+      }
     }
-    const n = g.recettes.length;
-    const recette = ({ id, neuf }) => {
-      const r = id ? D.recettes[id] : null;
-      return h("span", { class: "gd-histo-rec" }, r ? lienRecette(id, [icone(r.i, "xs", r.k === "spell" ? null : r.q), h("span", {}, r.n)], `q-${couleurNom(r)}`)
-        : h("span", { class: "muted" }, "une recette pas encore dans le carnet"), neuf ? h("span", { class: "gd-badge-neuf" }, "Nouveau pour la guilde") : null);
+    const niveau = (l) => (l.type === "recette" ? D.recettes[l.id].s || 0 : 0);
+    const avant = (a, b) => (b.type === "arrivee") - (a.type === "arrivee") || b.neuf - a.neuf || niveau(b) - niveau(a);
+    // le rang de chaque ligne parmi celles de son membre, le même jour
+    const parMembre = new Map();
+    for (const l of L) {
+      const k = `${l.jour}\n${l.qui[0]}`;
+      if (!parMembre.has(k)) parMembre.set(k, []);
+      parMembre.get(k).push(l);
+    }
+    for (const lignes of parMembre.values()) lignes.sort(avant).forEach((l, i) => { l.rang = i; });
+    return L.sort((a, b) => String(b.jour || "").localeCompare(String(a.jour || "")) || a.rang - b.rang || avant(a, b));
+  }
+  function ligneNouveaute(l) {
+    const date = h("time", { class: "gd-nv-date", datetime: l.jour, title: dateComplete(l.jour) }, ilYa(l.jour));
+    const nomQui = (nom) => {
+      const x = membreDe(nom);
+      return x ? h("a", { class: `gd-nv-qui ${classeCss(x)}`, href: lienMembre(x) }, nom) : h("b", { class: "gd-nv-qui" }, nom);
     };
-    const noms = h("span", { class: "gd-histo-recettes" });
-    const montrer = (tout) => {
-      fill(noms, (tout ? g.recettes : g.recettes.slice(0, 3)).map(recette), !tout && n > 3
-        ? h("button", { type: "button", class: "gd-histo-plus", "aria-label": `Voir les ${n - 3} autres recettes`, onclick: () => {
-          montrer(true); infobulles();
-          const a = noms.children[3] && noms.children[3].querySelector("a");
-          if (a) a.focus();
-        } }, `+${n - 3}`) : null);
-    };
-    montrer(false);
-    const neufs = g.recettes.filter((r) => r.neuf).length;
-    return h("li", { class: `gd-histo-ligne${neufs ? " neuf" : ""}` }, h("span", { class: "gd-histo-ic" }, icone(iconeMetier(g.m), "md")),
-      h("div", { class: "gd-histo-corps" }, h("p", { class: "gd-histo-phrase" }, qui, ` a appris ${n > 1 ? `${n} recettes` : "une recette"}`, g.m ? ` ${deMetier(nomMetier(g.m))}` : null), noms),
+    const qui = l.qui.flatMap((n, i) => [i ? (i === l.qui.length - 1 ? " et " : ", ") : null, nomQui(n)]);
+    if (l.type === "arrivee") {
+      const x = membreDe(l.qui[0]);
+      const ic = x && Array.isArray(x.metiers) && x.metiers.length ? iconeMetier(x.metiers[0].cle) : "inv_misc_book_11";
+      return h("li", { class: "gd-nv arrivee" }, h("span", { class: "gd-nv-texte" }, icone(ic, "xs"), " ", qui, " partage maintenant ses métiers"), date);
+    }
+    const r = D.recettes[l.id];
+    return h("li", { class: `gd-nv${l.neuf ? " neuf" : ""}` },
+      h("span", { class: "gd-nv-texte" },
+        lienRecette(l.id, [icone(r.i, "xs", r.k === "spell" ? null : r.q), h("span", {}, r.n)], `gd-nv-rec q-${couleurNom(r)}`),
+        h("span", { class: "gd-nv-sous" }, ` · ${nomMetier(l.m || r.m)} · `), qui,
+        l.neuf ? h("span", { class: "gd-nv-neuf", title: "Personne dans la guilde ne la connaissait" }, "Nouveau") : null),
       date);
   }
-  // L'accueil (19/11, Melvin : « 5-6 persos », que ça ne prenne pas trop de place) : une ligne par membre et par jour, ses métiers réunis
-  // (« Forge 23, Cuisine 4 »), les nouvelles pour la guilde puis les plus hautes d'abord ; la page Métiers garde le détail par métier
-  function groupesParPerso() {
-    const G = [], parCle = new Map();
-    for (const g of groupesHistorique()) {
-      const cle = `${g.jour}\n${g.qui}`;
-      let p = parCle.get(cle);
-      if (!p) { p = { type: "perso", jour: g.jour, qui: g.qui, arrivee: false, metiers: [], recettes: [] }; parCle.set(cle, p); G.push(p); }
-      if (g.type === "arrivee") { p.arrivee = true; continue; }
-      p.metiers.push({ m: g.m, n: g.recettes.length });
-      p.recettes.push(...g.recettes);
-    }
-    const niveau = (x) => ((x.id && D.recettes[x.id]) || {}).s || 0;
-    for (const p of G) {
-      p.metiers.sort((a, b) => b.n - a.n);
-      p.recettes.sort((a, b) => b.neuf - a.neuf || niveau(b) - niveau(a));
-    }
-    return G;
-  }
-  function lignePerso(p) {
-    if (!p.recettes.length) return ligneHistorique({ type: "arrivee", jour: p.jour, qui: p.qui });
-    const n = p.recettes.length;
-    const g = { type: "recette", jour: p.jour, qui: p.qui, m: p.metiers[0].m, recettes: p.recettes };
-    const li = ligneHistorique(g);
-    // la phrase : « a appris 30 recettes : Forge 23, Cuisine 4, Secourisme 3 », ou « partage maintenant ses métiers » à son arrivée
-    const phrase = li.querySelector(".gd-histo-phrase");
-    const qui = phrase && phrase.firstChild;
-    const detail = p.metiers.length > 1 ? ` : ${p.metiers.map((x) => `${nomMetier(x.m)} ${x.n}`).join(", ")}` : ` ${deMetier(nomMetier(p.metiers[0].m))}`;
-    if (phrase && qui) fill(phrase, qui, p.arrivee ? ` partage maintenant ses métiers · ${n > 1 ? `${n} recettes` : "une recette"}${detail}`
-      : ` a appris ${n > 1 ? `${n} recettes` : "une recette"}${detail}`);
-    return li;
-  }
-  // Le bloc : au plus max groupes ; vide, une phrase (le bloc reste, pour qu'on sache qu'il existe) ; « Tout voir » vers la rubrique Métiers ;
-  // parPerso : une ligne par membre et par jour (l'accueil)
-  function blocNouveautes(titre, max, tout, parPerso) {
-    const G = parPerso ? groupesParPerso() : groupesHistorique();
-    const bloc = cadre(titre, G.length ? h("ul", { class: "gd-histo" }, G.slice(0, max).map(parPerso ? lignePerso : ligneHistorique))
-      : h("p", { class: "gd-histo-vide" }, "Les nouvelles recettes apprises par les membres apparaîtront ici."));
+  // Le bloc : au plus max lignes ; avec pas, un bouton en montre pas de plus ; vide, une phrase (le bloc reste, pour qu'on sache qu'il existe) ;
+  // « Tout voir » vers la rubrique Métiers
+  function blocNouveautes(titre, max, tout, pas) {
+    const L = lignesNouveautes();
+    const liste = h("ul", { class: "gd-nv-liste" });
+    const bas = h("div", { class: "gd-nv-bas" });
+    const montrer = (n) => {
+      fill(liste, L.slice(0, n).map(ligneNouveaute));
+      fill(bas, pas && L.length > n ? h("button", { type: "button", class: "gd-plus", onclick: () => { montrer(n + pas); infobulles(); } },
+        `Voir ${Math.min(pas, L.length - n)} de plus`) : null,
+      tout && L.length ? h("a", { class: "gd-voir", href: tout }, "Tout voir ›") : null);
+    };
+    montrer(max);
+    const bloc = cadre(titre, L.length ? [liste, bas] : h("p", { class: "gd-histo-vide" }, "Les nouvelles recettes apprises par les membres apparaîtront ici."));
     bloc.classList.add("gd-nouveautes-metiers");
-    if (G.length && tout) bloc.append(h("a", { class: "gd-voir", href: tout }, "Tout voir ›"));
-    else if (G.length > max) bloc.append(h("p", { class: "gd-histo-note" }, `Les ${max} dernières.`));
     return bloc;
   }
 
