@@ -1,9 +1,9 @@
 name: Membres de la guilde
 
-# La rubrique Membres du site, relue sur l'armurerie officielle toutes les 6 heures, même quand aucun PC n'est allumé.
+# La rubrique Membres du site, relue sur l'armurerie officielle toutes les heures (GitHub retarde ou saute parfois un passage), même quand aucun PC n'est allumé.
 on:
   schedule:
-    - cron: "17 */6 * * *"
+    - cron: "37 * * * *"
   workflow_dispatch:
   push:
     paths:
