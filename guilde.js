@@ -187,8 +187,15 @@
       const r = (D.recettes || {})[id] || {};
       return { pret: false, reste: Number.MAX_SAFE_INTEGER, texte: r.cd ? `Recharge de ${dureeRecharge(r.cd)}` : "Recharge inconnue", titre: `Pas encore relevée par l'addon ${nomAddonMetiers()}` };
     }
-    const d = dateDe((m.recharges || {})[id]);
-    const reste = d ? d.getTime() - Date.now() : 0;
+    let d = dateDe((m.recharges || {})[id]);
+    let reste = d ? d.getTime() - Date.now() : 0;
+    // L'horloge du jeu (GetTime, en millisecondes sur 32 bits) fait un tour tous les 2^32 ms, environ 49,7 jours : une recharge lancée avant la
+    // session revenait d'un tour trop tard dans l'addon (1.7.2 et avant). Une attente plus longue que la recharge elle-même perd ce tour.
+    const cd = ((D.recettes || {})[id] || {}).cd;
+    if (d && cd && reste > cd * 36e5 + 6e4) {
+      reste -= 2 ** 32;
+      d = new Date(d.getTime() - 2 ** 32);
+    }
     return reste > 0 ? { pret: false, reste, texte: `Prête dans ${duree(reste)}`, titre: `Prête ${quand(d.toISOString())}` }
       : { pret: true, reste: 0, texte: "Prête", titre: "D'après son dernier relevé" };
   }
