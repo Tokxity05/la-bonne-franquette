@@ -54,7 +54,7 @@ local function split(s, sep)
 end
 local function compter(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
-local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.7.2"
+local VERSION = texte((C_AddOns and sur(C_AddOns.GetAddOnMetadata, "MetierLBF", "Version")) or sur(GetAddOnMetadata, "MetierLBF", "Version")) or "1.7.3"
 
 local function plusRecente(a, b)
 	local x, y = split(a or "0", "."), split(b or "0", ".")
@@ -194,7 +194,10 @@ local function lireRecharges()
 			end
 			if debut and duree and debut > 0 and duree > 60 then
 				local reste = debut + duree - jeu
-				if reste > 0 then rech[id] = math.floor(t + reste) end
+				-- GetTime() compte en millisecondes sur 32 bits : une recharge lancée avant la session revient décalée d'un tour (2^32 ms, environ
+				-- 49,7 jours) ; une attente plus longue que la recharge elle-même perd ce tour
+				if reste > duree + 60 then reste = reste - 4294967.296 end
+				if reste > 0 and reste <= duree + 60 then rech[id] = math.floor(t + reste) end
 			end
 		end
 	end
