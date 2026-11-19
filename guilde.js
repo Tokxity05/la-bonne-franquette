@@ -9,7 +9,7 @@
    site.json > addons (menu, liste et page génériques ; une page propre se déclare dans PAGES_ADDONS).
    Site statique (GitHub Pages) : chemins relatifs, routage par hash, JavaScript sans bibliothèque.
      #/                          Accueil de la guilde
-     #/membres[?q=…&classe=…&niv=60]   les membres
+     #/membres[?q=…&classe=…]   les membres
      #/membre/<clé>[/<métier>[/<recette>]]   un membre : son profil, puis sa fenêtre de métier s'il partage ses métiers (clé = nom, nom-surnom si deux membres portent le même nom)
      #/metiers[?q=…]             la rubrique Métiers : « Qui sait faire… ? », les métiers, les nouveautés, les derniers membres vus
      #/metiers/envoyer           coller son code (/lbf code) pour apparaître tout de suite
@@ -430,7 +430,7 @@
     const css = (c) => (CLASSES[c] ? `c-${c}` : "c-inconnue");
     const chiffre = (href, n, mot) => h("a", { class: "gd-chiffre", href }, h("b", {}, n), h("span", {}, mot));
     return h("div", { class: "gd-chiffres" },
-      h("div", { class: "gd-chiffres-ligne" }, chiffre("#/membres", M.length, M.length > 1 ? "membres" : "membre"), chiffre("#/membres?niv=60", n60, "au niveau 60")),
+      h("div", { class: "gd-chiffres-ligne" }, chiffre("#/membres", M.length, M.length > 1 ? "membres" : "membre"), chiffre("#/membres", n60, "au niveau 60")),
       h("div", { class: "gd-classes" },
         h("div", { class: "gd-classes-barre", role: "img", "aria-label": `Les classes de la guilde : ${classes.map(([c, n]) => `${nomClasse(c)} ${n}`).join(", ")}` },
           classes.map(([c, n]) => h("span", { class: css(c), style: { flexGrow: String(n) }, title: `${nomClasse(c)} : ${n}` }))),
@@ -471,23 +471,21 @@
         : "La liste des membres n'a pas pu être lue. Réessaie dans un instant.")))));
       return;
     }
-    // L'état des filtres vit dans l'adresse (#/membres?q=…&classe=…&niv=60) : un lien partagé garde la même vue
-    const etat = { q: params.get("q") || "", classe: CLASSES[params.get("classe")] || params.get("classe") === "inconnue" ? params.get("classe") : "", n60: params.get("niv") === "60" };
+    // L'état des filtres vit dans l'adresse (#/membres?q=…&classe=…) : un lien partagé garde la même vue. Plus de filtre « Niveau 60 »
+    // (Melvin, 19/11 : tout le monde finira 60 ; le compte des 60 reste sur l'Accueil le temps du rush)
+    const etat = { q: params.get("q") || "", classe: CLASSES[params.get("classe")] || params.get("classe") === "inconnue" ? params.get("classe") : "" };
     const classes = [...new Set(tous.map((p) => (CLASSES[p.classe] ? p.classe : "inconnue")))].sort((a, b) => (CLASSES[a] || "~").localeCompare(CLASSES[b] || "~", "fr"));
     const champ = h("input", { type: "search", class: "lv-cherche gd-membres-cherche", value: etat.q, placeholder: "Chercher un nom…", "aria-label": "Chercher un membre par son nom",
       autocomplete: "off", spellcheck: "false", enterkeyhint: "search" });
-    const b60 = h("button", { type: "button", class: "gd-pastille gd-bascule" });
     const pastilles = h("div", { class: "gd-pastilles", role: "group", "aria-label": "Filtrer par classe" });
     const compte = h("p", { class: "gd-roster-compte", "aria-live": "polite" });
     const liste = h("ul", { class: "gd-roster" });
     const garde = (p, sauf) => (sauf === "classe" || !etat.classe || (CLASSES[p.classe] ? p.classe : "inconnue") === etat.classe)
-      && (sauf === "n60" || !etat.n60 || p.niveau >= 60)
       && (!etat.q.trim() || plat(etat.q).trim().split(" ").every((w) => plat(`${p.nom} ${p.surnom || ""}`).includes(w)));
     function adresse() {
       const u = new URLSearchParams();
       if (etat.q.trim()) u.set("q", etat.q.trim());
       if (etat.classe) u.set("classe", etat.classe);
-      if (etat.n60) u.set("niv", "60");
       const s = u.toString();
       history.replaceState(null, "", `#/membres${s ? `?${s}` : ""}`);
     }
@@ -502,19 +500,15 @@
       fill(pastilles, pastille("", "Toutes", avant.length, null),
         classes.map((c) => pastille(c, c === "inconnue" ? "Inconnue" : CLASSES[c], avant.filter((p) => (CLASSES[p.classe] ? p.classe : "inconnue") === c).length, c === "inconnue" ? "c-inconnue" : `c-${c}`)));
       if (focus != null) { const b = [...pastilles.children].find((x) => x.getAttribute("data-cle") === focus); if (b) b.focus(); }
-      fill(b60, "Niveau 60", h("b", {}, tous.filter((p) => garde(p, "n60") && p.niveau >= 60).length));
-      b60.classList.toggle("actif", etat.n60);
-      b60.setAttribute("aria-pressed", String(etat.n60));
       fill(compte, vus.length === tous.length ? pl(tous.length, "membre") : `${vus.length} sur ${pl(tous.length, "membre")}`);
       fill(liste, vus.length ? vus.map(lignePerso) : h("li", { class: "gd-roster-vide" }, h("p", {}, "Aucun membre ne correspond."),
-        h("button", { type: "button", class: "btn ghost", onclick: () => { etat.q = ""; etat.classe = ""; etat.n60 = false; champ.value = ""; adresse(); dessiner(); champ.focus(); } }, "Tout afficher")));
+        h("button", { type: "button", class: "btn ghost", onclick: () => { etat.q = ""; etat.classe = ""; champ.value = ""; adresse(); dessiner(); champ.focus(); } }, "Tout afficher")));
     }
-    b60.addEventListener("click", () => { etat.n60 = !etat.n60; adresse(); dessiner(); });
     champ.addEventListener("input", () => { etat.q = champ.value; adresse(); dessiner(); });
     champ.addEventListener("keydown", (e) => { if (e.key === "Escape" && champ.value) { e.preventDefault(); champ.value = ""; etat.q = ""; adresse(); dessiner(); } });
     dessiner();
     vue.append(h("div", { class: "stack" }, h("section", { class: "frame gd-roster-cadre" },
-      h("div", { class: "gd-roster-outils" }, champ, b60, compte), pastilles, liste)));
+      h("div", { class: "gd-roster-outils" }, champ, compte), pastilles, liste)));
   }
   // Un membre : nom à la couleur de sa classe et surnom, niveau, race et classe, rang, niveau d'objet, puis ses métiers partagés et sa fiche officielle
   function lignePerso(p) {
