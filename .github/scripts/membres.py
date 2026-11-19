@@ -1,5 +1,5 @@
 """Les membres de La Bonne Franquette d'après l'armurerie officielle de Blizzard (publique), pour la rubrique Membres du site.
-Lancé par GitHub Actions (.github/workflows/membres.yml) toutes les 6 heures : écrit data/membres.json seulement si la liste a changé.
+Lancé par GitHub Actions (.github/workflows/membres.yml) toutes les heures : écrit data/membres.json seulement si la liste a changé.
 Python standard, aucune dépendance. Les noms des rangs viennent d'ailleurs (data/rangs.json, lus en jeu par l'addon d'un officier)."""
 import json
 import re
