@@ -405,7 +405,10 @@
     fill(document.getElementById("menu"), h("div", { class: "gd-menu-in" },
       h("a", { class: "gd-marque", href: "#/" }, h("img", { class: "gd-marque-logo", src: "img/wow-forever-logo.png", alt: "", width: 36, height: 29 }),
         h("span", { class: "gd-marque-txt" }, h("span", { class: "gd-marque-nom" }, CFG.court), h("span", { class: "gd-marque-sous" }, CFG.nom))),
-      h("nav", { class: "gd-nav", "aria-label": "Menu" }, items)));
+      h("nav", { class: "gd-nav", "aria-label": "Menu" }, items,
+        // 20/11 (Melvin : « il ne faut pas que ce soit compliqué de trouver comment envoyer ses métiers ») : un bouton à part, sur toutes les pages
+        CFG.service ? h("a", { class: `gd-envoyer-btn${page === "metiers" && params[0] === "envoyer" ? " actif" : ""}`, href: "#/metiers/envoyer",
+          "aria-current": page === "metiers" && params[0] === "envoyer" ? "page" : null }, icone(ICONE_ENVOI, "xs"), h("span", {}, "Envoyer mes métiers")) : null)));
   }
   const lienPanneau = (href, ic, nom, droite, actif) => h("a", { class: `gd-panneau-lien${actif ? " actif" : ""}`, href, "aria-current": actif ? "page" : null, onclick: fermerMenu },
     icone(ic, "sm"), h("span", {}, nom), droite);
@@ -1381,7 +1384,7 @@
       panneau: (sous) => [...(D ? listeMetiers().map((cle) => {
         const n = (IX.parMetier.get(cle) || []).length;
         return lienPanneau(`#/metier/${encodeURIComponent(cle)}`, iconeMetier(cle), nomMetier(cle), h("span", { class: "gd-compte", title: pl(n, "membre") }, n), cle === sous);
-      }) : []), CFG.service ? lienPanneau("#/metiers/envoyer", ICONE_ENVOI, "Envoyer mes métiers", null, sous === "envoyer") : null].filter(Boolean),
+      }) : [])].filter(Boolean),
     },
     addons: {
       titre: "Addons", href: "#/addons",
