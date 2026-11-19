@@ -1,7 +1,10 @@
 """Les membres de La Bonne Franquette d'après l'armurerie officielle de Blizzard (publique), pour la rubrique Membres du site.
-Lancé par GitHub Actions (.github/workflows/membres.yml) toutes les heures : écrit data/membres.json seulement si la liste a changé.
+Lancé par GitHub Actions (.github/workflows/membres.yml) toutes les heures : écrit data/membres.json seulement si la liste a changé, et
+data/equipement.json (l'équipement de chacun, sur sa fiche officielle) pour ceux dont le niveau d'objet ou le niveau a bougé, ou lus il y a plus
+d'un jour : 12 fiches au plus par passage, les nouveaux d'abord.
 Python standard, aucune dépendance. Les noms des rangs viennent d'ailleurs (data/rangs.json, lus en jeu par l'addon d'un officier)."""
 import json
+import os
 import re
 import sys
 import time
@@ -14,6 +17,9 @@ BASE = "https://worldofwarcraft.blizzard.com"
 REGION, GUILDE = "eu", "la-bonne-franquette"
 UA = "LBF-site-de-guilde/1.0 (+https://tokxity05.github.io/la-bonne-franquette/)"
 SORTIE = Path(__file__).resolve().parents[2] / "data" / "membres.json"
+EQUIPEMENT = SORTIE.parent / "equipement.json"
+MAX_FICHES = int(os.environ.get("LBF_MAX_FICHES") or 12)  # fiches lues par passage, pour ménager l'armurerie
+JOUR = 24 * 3600
 
 
 def obtenir(url, corps=None, entetes=None):
@@ -52,12 +58,73 @@ def roster():
         if not c.get("name"):
             continue
         adresse = (f"{c['name']}-{c['surname']}" if c.get("surname") else c["name"]).strip().lower().replace(" ", "-")
-        fiche = {"nom": c.get("name"), "surnom": c.get("surname"), "niveau": c.get("level"), "classe": ((c.get("class") or {}).get("enum") or "").lower() or None,
+        fiche = {"adresse": adresse, "nom": c.get("name"), "surnom": c.get("surname"), "niveau": c.get("level"), "classe": ((c.get("class") or {}).get("enum") or "").lower() or None,
                  "race": (c.get("race") or {}).get("name"), "rang": (m.get("rank") or {}).get("rankId"), "ilvl": c.get("averageItemLevel"),
                  "armurerie": f"{BASE}/fr-fr/forever/{REGION}/armory/character/{urllib.parse.quote(adresse)}" if c.get("url") else None}
         membres.append({k: v for k, v in fiche.items() if v is not None})
     membres.sort(key=lambda x: (x.get("rang", 99), -(x.get("niveau") or 0), x["nom"]))
     return membres
+
+
+def piece(it):
+    """Une pièce portée, en bref : emplacement, objet, nom, qualité, niveau d'objet, icône (numéro du fichier), enchantements, stats en clair."""
+    icone = next((a.get("value") for a in ((it.get("media") or {}).get("content") or {}).get("assets") or [] if a.get("key") == "icon"), None)
+    m = re.search(r"/icons/\d+/(\d+)\.jpg", icone or "")
+    p = {"s": (it.get("slot") or {}).get("type"), "id": it.get("id"), "n": it.get("name"), "q": ((it.get("quality") or {}).get("type") or "").lower() or None,
+         "l": (it.get("level") or {}).get("value"), "i": int(m.group(1)) if m else None,
+         "t": " ".join(x for x in [(it.get("item_subclass") or {}).get("name") if not it.get("is_subclass_hidden") else None, (it.get("inventory_type") or {}).get("name")] if x) or None,
+         "e": [e.get("display_string") for e in it.get("enchantments") or [] if isinstance(e, dict) and e.get("display_string")] or None,
+         "st": [((s.get("display") or {}).get("display_string")) for s in it.get("stats") or [] if isinstance(s, dict) and (s.get("display") or {}).get("display_string")] or None}
+    return {k: v for k, v in p.items() if v is not None}
+
+
+def equipement(adresse):
+    page = obtenir(f"{BASE}/fr-fr/forever/{REGION}/armory/character/{urllib.parse.quote(adresse)}")
+    i = page.find("var characterProfileInitialState = ")
+    if i < 0:
+        return None
+    etat = json.JSONDecoder().raw_decode(page, i + len("var characterProfileInitialState = "))[0]
+    c = (etat or {}).get("character") or {}
+    return [piece(it) for it in (c.get("gear") or {}).values() if isinstance(it, dict) and it.get("id")]
+
+
+def maj_equipement(membres):
+    """Relit l'équipement de ceux qui en ont besoin (nouveaux, niveau d'objet ou niveau changé, plus d'un jour), 12 au plus ; écrit si ça change."""
+    ancien = json.loads(EQUIPEMENT.read_text(encoding="utf-8")) if EQUIPEMENT.exists() else {}
+    persos = dict(ancien.get("persos") or {})
+    presents = {m["adresse"] for m in membres if m.get("adresse") and m.get("armurerie")}
+    persos = {k: v for k, v in persos.items() if k in presents}  # un membre parti s'en va
+    maintenant = time.time()
+
+    def priorite(m):
+        e = persos.get(m["adresse"])
+        if not e:
+            return (0, 0)
+        if e.get("ilvl") != m.get("ilvl") or e.get("niveau") != m.get("niveau"):
+            return (1, e.get("lu") or 0)
+        if maintenant - (e.get("lu") or 0) > JOUR:
+            return (2, e.get("lu") or 0)
+        return None
+    file = sorted((m for m in membres if m.get("adresse") in presents and priorite(m) is not None), key=priorite)[:MAX_FICHES]
+    lus = 0
+    for m in file:
+        try:
+            pieces = equipement(m["adresse"])
+        except Exception as err:  # une fiche absente ou refusée : on garde l'ancienne, on réessaiera
+            print(f"  {m['nom']} : {type(err).__name__}")
+            continue
+        if pieces is None:
+            continue
+        persos[m["adresse"]] = {"lu": int(maintenant), "ilvl": m.get("ilvl"), "niveau": m.get("niveau"), "pieces": pieces}
+        lus += 1
+    if persos == (ancien.get("persos") or {}):
+        print(f"Équipement : rien de changé ({lus} fiche(s) relue(s)).")
+        return
+    d = {"_meta": {"source": "Armurerie officielle de Blizzard (publique), fiche de chaque personnage, relue par GitHub Actions",
+                   "updated": datetime.now(timezone.utc).date().isoformat()},
+         "maj": datetime.now(timezone.utc).isoformat(timespec="seconds"), "region": REGION, "persos": persos}
+    EQUIPEMENT.write_text(json.dumps(d, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"Équipement : {lus} fiche(s) relue(s), {len(persos)} perso(s) en tout.")
 
 
 def main():
@@ -68,12 +135,13 @@ def main():
     ancien = json.loads(SORTIE.read_text(encoding="utf-8")) if SORTIE.exists() else {}
     if ancien.get("membres") == membres:
         print(f"{len(membres)} membres, rien de changé.")
-        return 0
-    d = {"_meta": {"source": "Armurerie officielle de Blizzard (publique), relue par GitHub Actions", "updated": datetime.now(timezone.utc).date().isoformat()},
-         "maj": datetime.now(timezone.utc).isoformat(timespec="seconds"), "membres": membres}
-    SORTIE.parent.mkdir(parents=True, exist_ok=True)
-    SORTIE.write_text(json.dumps(d, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"{len(membres)} membres écrits.")
+    else:
+        d = {"_meta": {"source": "Armurerie officielle de Blizzard (publique), relue par GitHub Actions", "updated": datetime.now(timezone.utc).date().isoformat()},
+             "maj": datetime.now(timezone.utc).isoformat(timespec="seconds"), "membres": membres}
+        SORTIE.parent.mkdir(parents=True, exist_ok=True)
+        SORTIE.write_text(json.dumps(d, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        print(f"{len(membres)} membres écrits.")
+    maj_equipement(membres)
     return 0
 
 
