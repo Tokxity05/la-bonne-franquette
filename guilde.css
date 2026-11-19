@@ -198,6 +198,11 @@ code {
 .gd-marque-sous { margin-top: 3px; font-size: .64rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--texte-3); transition: color .25s; }
 .gd-marque:hover .gd-marque-sous { color: var(--turquoise); }
 .gd-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+/* « Envoyer mes métiers », à part dans la barre du haut (20/11) */
+.gd-envoyer-btn { display: inline-flex; align-items: center; gap: 7px; margin-left: 8px; padding: 6px 13px; border: 1px solid rgba(79, 217, 207, .45); border-radius: 999px;
+  font-size: .88rem; font-weight: 600; white-space: nowrap; text-decoration: none; color: var(--turquoise-vif); background: var(--turquoise-voile); transition: background-color .2s, border-color .2s; }
+.gd-envoyer-btn:hover, .gd-envoyer-btn.actif { background: rgba(79, 217, 207, .2); border-color: var(--turquoise); }
+.gd-envoyer-btn .icon { border-radius: 4px; }
 .gd-lien {
   display: inline-flex;
   align-items: center;
