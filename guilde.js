@@ -418,7 +418,7 @@
   const nomClasse = (c) => CLASSES[c] || "Classe inconnue";
   function pageAccueil() {
     setTitre(null);
-    const nouveautes = D || ERREUR === "vide" ? blocNouveautes("Dernières nouveautés des métiers", 6, "#/metiers?voir=nouveautes") : null;
+    const nouveautes = D || ERREUR === "vide" ? blocNouveautes("Dernières nouveautés des métiers", 6, "#/metiers?voir=nouveautes", true) : null;
     vue.append(
       h("div", { class: "gd-hero" }, logoHero(), h("h1", {}, CFG.nom), CFG.accroche ? h("p", { class: "gd-hero-guilde" }, CFG.accroche) : null,
         h("div", { class: "gd-separateur", "aria-hidden": "true" }),
@@ -838,10 +838,43 @@
       h("div", { class: "gd-histo-corps" }, h("p", { class: "gd-histo-phrase" }, qui, ` a appris ${n > 1 ? `${n} recettes` : "une recette"}`, g.m ? ` ${deMetier(nomMetier(g.m))}` : null), noms),
       date);
   }
-  // Le bloc : au plus max groupes ; vide, une phrase (le bloc reste, pour qu'on sache qu'il existe) ; « Tout voir » vers la rubrique Métiers
-  function blocNouveautes(titre, max, tout) {
-    const G = groupesHistorique();
-    const bloc = cadre(titre, G.length ? h("ul", { class: "gd-histo" }, G.slice(0, max).map(ligneHistorique))
+  // L'accueil (19/11, Melvin : « 5-6 persos », que ça ne prenne pas trop de place) : une ligne par membre et par jour, ses métiers réunis
+  // (« Forge 23, Cuisine 4 »), les nouvelles pour la guilde puis les plus hautes d'abord ; la page Métiers garde le détail par métier
+  function groupesParPerso() {
+    const G = [], parCle = new Map();
+    for (const g of groupesHistorique()) {
+      const cle = `${g.jour}\n${g.qui}`;
+      let p = parCle.get(cle);
+      if (!p) { p = { type: "perso", jour: g.jour, qui: g.qui, arrivee: false, metiers: [], recettes: [] }; parCle.set(cle, p); G.push(p); }
+      if (g.type === "arrivee") { p.arrivee = true; continue; }
+      p.metiers.push({ m: g.m, n: g.recettes.length });
+      p.recettes.push(...g.recettes);
+    }
+    const niveau = (x) => ((x.id && D.recettes[x.id]) || {}).s || 0;
+    for (const p of G) {
+      p.metiers.sort((a, b) => b.n - a.n);
+      p.recettes.sort((a, b) => b.neuf - a.neuf || niveau(b) - niveau(a));
+    }
+    return G;
+  }
+  function lignePerso(p) {
+    if (!p.recettes.length) return ligneHistorique({ type: "arrivee", jour: p.jour, qui: p.qui });
+    const n = p.recettes.length;
+    const g = { type: "recette", jour: p.jour, qui: p.qui, m: p.metiers[0].m, recettes: p.recettes };
+    const li = ligneHistorique(g);
+    // la phrase : « a appris 30 recettes : Forge 23, Cuisine 4, Secourisme 3 », ou « partage maintenant ses métiers » à son arrivée
+    const phrase = li.querySelector(".gd-histo-phrase");
+    const qui = phrase && phrase.firstChild;
+    const detail = p.metiers.length > 1 ? ` : ${p.metiers.map((x) => `${nomMetier(x.m)} ${x.n}`).join(", ")}` : ` ${deMetier(nomMetier(p.metiers[0].m))}`;
+    if (phrase && qui) fill(phrase, qui, p.arrivee ? ` partage maintenant ses métiers · ${n > 1 ? `${n} recettes` : "une recette"}${detail}`
+      : ` a appris ${n > 1 ? `${n} recettes` : "une recette"}${detail}`);
+    return li;
+  }
+  // Le bloc : au plus max groupes ; vide, une phrase (le bloc reste, pour qu'on sache qu'il existe) ; « Tout voir » vers la rubrique Métiers ;
+  // parPerso : une ligne par membre et par jour (l'accueil)
+  function blocNouveautes(titre, max, tout, parPerso) {
+    const G = parPerso ? groupesParPerso() : groupesHistorique();
+    const bloc = cadre(titre, G.length ? h("ul", { class: "gd-histo" }, G.slice(0, max).map(parPerso ? lignePerso : ligneHistorique))
       : h("p", { class: "gd-histo-vide" }, "Les nouvelles recettes apprises par les membres apparaîtront ici."));
     bloc.classList.add("gd-nouveautes-metiers");
     if (G.length && tout) bloc.append(h("a", { class: "gd-voir", href: tout }, "Tout voir ›"));
