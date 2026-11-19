@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main  # la dernière version du site (et du dernier equipement.json), pas celle qui a déclenché le passage
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -33,9 +35,11 @@ jobs:
           git add data/*.json  # membres.json et equipement.json (un fichier absent ne fait pas échouer)
           if git diff --cached --quiet; then echo "Rien de changé."; exit 0; fi
           git commit -m "Membres : mise à jour depuis l'armurerie"
-          # le site a pu être publié pendant la relecture (le grimoire envoie ses fichiers un à un) : on se remet à niveau avant d'envoyer
+          # le site a pu changer pendant la relecture (une publication, un autre passage) : on se remet à niveau ; en cas de conflit, nos fichiers
+          # l'emportent (ils sont réécrits en entier à chaque passage) ; trois échecs : on laisse tomber sans erreur, le passage suivant refera tout
           for essai in 1 2 3; do
-            git pull --rebase origin main && git push && exit 0
+            git pull --rebase -X theirs origin main && git push && exit 0
+            git rebase --abort 2>/dev/null || true
             sleep 10
           done
-          exit 1
+          echo "::warning::Envoi impossible après trois essais : le prochain passage réessaiera."
