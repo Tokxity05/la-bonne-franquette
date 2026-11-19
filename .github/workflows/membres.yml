@@ -31,4 +31,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/membres.json
-          if git diff --cached --quiet; then echo "Rien de changé."; else git commit -m "Membres : mise à jour depuis l'armurerie" && git push; fi
+          if git diff --cached --quiet; then echo "Rien de changé."; exit 0; fi
+          git commit -m "Membres : mise à jour depuis l'armurerie"
+          # le site a pu être publié pendant la relecture (le grimoire envoie ses fichiers un à un) : on se remet à niveau avant d'envoyer
+          for essai in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            sleep 10
+          done
+          exit 1
