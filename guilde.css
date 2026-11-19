@@ -805,11 +805,6 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
 .gd-pastille:hover { color: var(--texte); background: var(--survol); border-color: var(--ligne-forte); }
 .gd-pastille.actif { color: var(--turquoise-vif); background: var(--turquoise-voile); border-color: rgba(79, 217, 207, .45); box-shadow: 0 0 16px -6px rgba(79, 217, 207, .55); }
 .gd-pastille.actif b { color: var(--turquoise); }
-/* « Niveau 60 » : une case qui se coche */
-.gd-bascule::before { content: ""; flex: none; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px currentColor; opacity: .75; }
-.gd-bascule.actif::before { opacity: 1; box-shadow: none;
-  background: var(--turquoise-vif) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2304201f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3.5 8.5 3 3 6-7'/%3E%3C/svg%3E") center / 11px no-repeat; }
-
 /* La liste : un tableau sans en-tête (les colonnes s'alignent d'une ligne à l'autre par subgrid), des cartes sous 980 px */
 .gd-roster {
   list-style: none; margin: 0; padding: 0;
