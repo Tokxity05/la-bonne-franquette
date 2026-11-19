@@ -7,7 +7,8 @@
    Réglages : un espace KV lié sous le nom FICHES ; la variable SITE si le site change d'adresse.
    Le robot des Membres (19/11) : GitHub saute la plupart des passages programmés de son robot (.github/workflows/membres.yml) ; un déclencheur
    horaire du Worker (Cron Trigger) le lance d'ici. Il faut le secret GH_JETON : un jeton GitHub limité au dépôt du site, permission Actions
-   en lecture et écriture, rien d'autre ; GH_DEPOT si le dépôt change de nom. Sans secret, rien ne part. */
+   en lecture et écriture, rien d'autre ; GH_DEPOT si le dépôt change de nom. Sans secret, rien ne part.
+     GET  /robot     le dernier lancement du robot par le relais : { quand, statut (204 = lancé), message } (rien de secret) */
 
 const SITE_DEFAUT = "https://tokxity05.github.io/la-bonne-franquette";
 const DEPOT_DEFAUT = "Tokxity05/la-bonne-franquette";
@@ -119,6 +120,32 @@ async function envoyer(req, env, origine) {
   return json({ ok: true, nom: c.nom, fiche: c.fiche, recu: maintenant, message: `Reçu : ${pl(c.metiers, "métier")}, ${pl(c.recettes, "recette")}.` }, 200, origine);
 }
 
+// Lance le robot des Membres sur GitHub, et garde le résultat (KV « robot », lisible sur /robot) pour qu'on sache s'il est bien parti
+async function lancerRobot(env) {
+  const etat = { quand: new Date().toISOString() };
+  if (!env.GH_JETON) {
+    etat.statut = 0;
+    etat.message = "Le secret GH_JETON n'est pas posé : rien n'est parti.";
+  } else {
+    try {
+      const rep = await fetch(`https://api.github.com/repos/${String(env.GH_DEPOT || DEPOT_DEFAUT)}/actions/workflows/membres.yml/dispatches`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.GH_JETON}`, Accept: "application/vnd.github+json", "User-Agent": "lbf-relais",
+          "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: "main" }),
+      });
+      etat.statut = rep.status;
+      etat.message = rep.status === 204 ? "Robot lancé." : (await rep.text()).slice(0, 300);
+    } catch (err) {
+      etat.statut = -1;
+      etat.message = String(err).slice(0, 200);
+    }
+  }
+  console.log("Robot des Membres :", JSON.stringify(etat));
+  if (env.FICHES) await env.FICHES.put("robot", JSON.stringify(etat));
+  return etat;
+}
+
 export default {
   async fetch(req, env) {
     const origine = origineDe(req, env);
@@ -126,6 +153,10 @@ export default {
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(origine) });
     if (!env.FICHES) return json({ ok: false, message: "Relais mal réglé : l'espace KV FICHES n'est pas lié au Worker." }, 500, origine);
     if (pathname === "/fiches" && req.method === "GET") return json(await lireDoc(env), 200, origine, { "Cache-Control": "public, max-age=60" });
+    if (pathname === "/robot" && req.method === "GET") {
+      const r = await env.FICHES.get("robot");
+      return json(r ? JSON.parse(r) : { message: "Le relais n'a encore lancé aucun robot (déclencheur horaire pas encore passé, ou pas posé)." }, 200, origine);
+    }
     if (pathname === "/envoyer" && req.method === "POST") {
       try { return await envoyer(req, env, origine); } catch (err) { return json({ ok: false, message: "Le relais a eu un souci : réessaie dans un instant." }, 500, origine); }
     }
@@ -136,13 +167,6 @@ export default {
   },
   // Chaque heure (Cron Trigger du Worker) : lance le robot des Membres sur GitHub (relecture de l'armurerie), que GitHub oublie de lancer seul
   async scheduled(evenement, env, ctx) {
-    if (!env.GH_JETON) return;
-    const depot = String(env.GH_DEPOT || DEPOT_DEFAUT);
-    ctx.waitUntil(fetch(`https://api.github.com/repos/${depot}/actions/workflows/membres.yml/dispatches`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${env.GH_JETON}`, Accept: "application/vnd.github+json", "User-Agent": "lbf-relais",
-        "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json" },
-      body: JSON.stringify({ ref: "main" }),
-    }));
+    ctx.waitUntil(lancerRobot(env));
   },
 };
