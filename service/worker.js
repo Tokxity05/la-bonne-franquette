@@ -4,9 +4,13 @@
      GET  /fiches    les fiches reçues : { maj, fiches: { nom: { f, recu } }, oublis: { nom: date } }
    Gardé : la fiche telle que l'addon la partage déjà sur le canal de la guilde (nom, classe, spécialisations, métiers, recettes, recharges, version)
    et l'empreinte de la clé du perso, jamais la clé. Ni adresse IP, ni cookie, ni rien d'autre.
-   Réglages : un espace KV lié sous le nom FICHES ; la variable SITE si le site change d'adresse. */
+   Réglages : un espace KV lié sous le nom FICHES ; la variable SITE si le site change d'adresse.
+   Le robot des Membres (19/11) : GitHub saute la plupart des passages programmés de son robot (.github/workflows/membres.yml) ; un déclencheur
+   horaire du Worker (Cron Trigger) le lance d'ici. Il faut le secret GH_JETON : un jeton GitHub limité au dépôt du site, permission Actions
+   en lecture et écriture, rien d'autre ; GH_DEPOT si le dépôt change de nom. Sans secret, rien ne part. */
 
 const SITE_DEFAUT = "https://tokxity05.github.io/la-bonne-franquette";
+const DEPOT_DEFAUT = "Tokxity05/la-bonne-franquette";
 const CLASSES = new Set(["WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE", "WARLOCK", "DRUID"]);
 const LIGNES = new Set([129, 164, 165, 171, 182, 185, 186, 197, 202, 333, 356, 393]);
 const MAX_FICHE = 40000;
@@ -129,5 +133,16 @@ export default {
       return new Response("Métiers LBF : le relais des codes du site de La Bonne Franquette.\n", { headers: { "Content-Type": "text/plain; charset=utf-8", ...cors(origine) } });
     }
     return json({ ok: false, message: "Adresse inconnue." }, 404, origine);
+  },
+  // Chaque heure (Cron Trigger du Worker) : lance le robot des Membres sur GitHub (relecture de l'armurerie), que GitHub oublie de lancer seul
+  async scheduled(evenement, env, ctx) {
+    if (!env.GH_JETON) return;
+    const depot = String(env.GH_DEPOT || DEPOT_DEFAUT);
+    ctx.waitUntil(fetch(`https://api.github.com/repos/${depot}/actions/workflows/membres.yml/dispatches`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env.GH_JETON}`, Accept: "application/vnd.github+json", "User-Agent": "lbf-relais",
+        "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json" },
+      body: JSON.stringify({ ref: "main" }),
+    }));
   },
 };
