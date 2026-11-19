@@ -606,29 +606,22 @@ a.gd-membre:hover, a.gd-qui:hover { background: var(--survol); text-decoration: 
 /* Les dernières nouveautés des métiers : une ligne par groupe (un membre, un métier, un jour) : icône du métier, nom, ce qu'il a appris, date ;
    une recette nouvelle pour la guilde porte le badge doré, et sa ligne un filet d'or à gauche */
 .gd-nouveautes-metiers { scroll-margin-top: 84px; }
-.gd-histo { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.gd-histo-ligne { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 4px 14px; padding: 10px 12px; border-radius: 12px; transition: background-color .2s; }
-.gd-histo-ligne:hover { background: rgba(150, 180, 235, .035); }
-.gd-histo-ligne.neuf { background: linear-gradient(90deg, rgba(233, 199, 126, .07), transparent 65%); }
-.gd-histo-ligne.neuf::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 2px; border-radius: 2px;
-  background: linear-gradient(180deg, var(--or-pale), var(--or)); box-shadow: 0 0 8px rgba(233, 199, 126, .55); }
-.gd-histo-ic { line-height: 0; }
-.gd-histo-ic .icon.md { border-radius: 50%; }
-.gd-histo-corps { min-width: 0; }
-.gd-histo-phrase { margin: 0; line-height: 1.45; color: var(--texte-2); overflow-wrap: anywhere; }
-.gd-histo-qui { font-weight: 600; }
-.gd-histo-recettes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 5px; font-size: .88rem; }
-.gd-histo-rec { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
-.gd-histo-rec > a { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
-.gd-histo-plus {
-  min-height: 26px; padding: 0 10px; font-size: .78rem; font-weight: 600; cursor: pointer;
-  color: var(--turquoise); background: rgba(79, 217, 207, .06); border: 1px dashed rgba(79, 217, 207, .4); border-radius: 999px;
-  transition: color .2s, background-color .2s, border-color .2s;
-}
-.gd-histo-plus:hover { color: var(--turquoise-vif); background: var(--turquoise-voile); border-style: solid; }
-.gd-histo-date { padding-top: 2px; font-size: .78rem; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--texte-3); cursor: default; }
+/* Les nouveautés en lignes simples (20/11) : une par ligne, la date à droite */
+.gd-nv-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.gd-nv { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 7px 10px; border-radius: 10px; transition: background-color .2s; }
+.gd-nv:hover { background: rgba(150, 180, 235, .035); }
+.gd-nv.neuf { background: linear-gradient(90deg, rgba(233, 199, 126, .07), transparent 65%); }
+.gd-nv-texte { min-width: 0; font-size: .92rem; line-height: 1.5; color: var(--texte-2); overflow-wrap: anywhere; }
+.gd-nv-texte .icon { vertical-align: -3px; }
+.gd-nv-rec { font-weight: 500; }
+.gd-nv-rec .icon { margin-right: 6px; }
+.gd-nv-sous { color: var(--texte-3); }
+.gd-nv-qui { font-weight: 600; }
+.gd-nv-neuf { display: inline-block; margin-left: 8px; padding: 0 7px; border: 1px solid rgba(233, 199, 126, .45); border-radius: 999px; font-size: .7rem; font-weight: 600; line-height: 1.6; color: var(--or); vertical-align: 1px; }
+.gd-nv-date { font-size: .78rem; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--texte-3); cursor: default; }
+.gd-nv-bas { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.gd-nv-bas:empty { display: none; }
 .gd-histo-vide { margin: 0; padding: 2px 4px; font-size: .9rem; font-style: italic; color: var(--texte-3); }
-.gd-histo-note { margin: 10px 0 0; font-size: .8rem; text-align: center; color: var(--texte-3); }
 .gd-badge-neuf { flex: none; padding: 1px 10px; font-size: .72rem; font-weight: 600; white-space: nowrap; color: var(--or-pale); background: rgba(233, 199, 126, .08); border: 1px solid rgba(233, 199, 126, .45); border-radius: 999px; }
 
 /* Le rang dans un métier : une barre fine, du turquoise vers l'or à mesure qu'on approche du plafond
@@ -1030,8 +1023,6 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
   .gd-rec { flex-wrap: wrap; }
   .gd-rec .gd-res-qui { padding-left: 34px; }
   .gd-transp, .gd-points { grid-template-columns: 1fr; }
-  .gd-histo-ligne { grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; padding: 10px 8px 10px 10px; }
-  .gd-histo-date { grid-column: 2; padding-top: 0; }
   .gd-tete-membre h1, .gd-tete-metier h1 { font-size: 2.1rem; }
   .gd-tete-metier { gap: 16px; }
   .gd-tete-metier .icon.xl { width: 58px; height: 58px; border-radius: 16px; }
@@ -1056,14 +1047,12 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
   .lv-rec, .lv-cat { min-height: 40px; }
   .gd-puce { min-height: 34px; }
   .gd-classes-legende a, .gd-officielle, .gd-badge-metiers, .gd-voir { min-height: 34px; }
-  .gd-histo-rec > a, .gd-histo-plus { min-height: 32px; }
-  .gd-histo-plus { min-width: 40px; }
   .gd-perso-nom { display: inline-flex; align-items: center; min-width: 32px; min-height: 32px; }
   /* Un composant cherché dans Métiers : son icône et son nom mènent à Wowhead */
   .gd-res-comp .gd-res-ic { display: inline-grid; place-items: center; min-width: 32px; min-height: 32px; margin: -5px; }
   .gd-res-comp .gd-res-nom { align-self: flex-start; padding-block: 5px; margin-block: -5px; }
   /* Les liens dans le texte : un remplissage vertical qui agrandit la cible sans écarter les lignes */
-  .gd-fil a, .gd-pied a, .gd-histo-qui, .lv-comp-nom a, .lv-nom a, .gd-homonymes a, .gd-pas-partage a, .gd-addon h2 a { padding-block: 8px; }
+  .gd-fil a, .gd-pied a, .lv-comp-nom a, .lv-nom a, .gd-homonymes a, .gd-pas-partage a, .gd-addon h2 a { padding-block: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
