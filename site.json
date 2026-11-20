@@ -18,6 +18,6 @@
     { "id": "addons", "titre": "Addons", "icone": "inv_misc_gear_01", "desc": "Les addons de la guilde, à télécharger." }
   ],
   "addons": [
-    { "id": "metier-lbf", "nom": "Métiers LBF", "icone": "trade_blacksmithing", "desc": "Partage tes métiers et tes recettes avec la guilde : c'est lui qui remplit la rubrique Métiers.", "fichier": "MetierLBF.zip", "curseforge": "" }
+    { "id": "metier-lbf", "nom": "Métiers LBF", "icone": "trade_blacksmithing", "desc": "Partage tes métiers et tes recettes avec la guilde : c'est lui qui remplit la rubrique Métiers.", "fichier": "MetierLBF.zip", "curseforge": "https://www.curseforge.com/wow/addons/metiers-lbf" }
   ]
 }
