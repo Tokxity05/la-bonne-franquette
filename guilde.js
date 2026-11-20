@@ -317,6 +317,8 @@
   const fichierSur = (f) => (typeof f === "string" && /^[\w.-]+(\/[\w.-]+)*\.zip$/i.test(f) && !f.includes("..") ? f : null);
   // La page CurseForge d'un addon (site.json > addons[].curseforge, projet non répertorié : seuls ceux qui ont le lien le trouvent)
   const curseforgeSur = (u) => (typeof u === "string" && /^https:\/\/(www\.)?curseforge\.com\/[\w\/.-]+$/.test(u.trim()) ? u.trim() : null);
+  // Sa page d'installation (…/install/<fichier>, data/guilde.json > addon.installer) : elle ouvre l'appli CurseForge sur l'installation
+  const installerSur = (u) => (curseforgeSur(u) && /\/install\/\d+$/.test(u.trim()) ? u.trim() : null);
   // Un addon : son entrée de site.json (le nom affiché vient d'elle) ; pour Métiers LBF, data/guilde.json > addon (écrit avec le zip)
   // passe devant pour le fichier, la version et les nouveautés
   function infoAddon(id = ADDON_METIERS) {
@@ -327,7 +329,7 @@
     // Sur CurseForge (19/11, Melvin) : on l'installe et on le met à jour depuis l'appli CurseForge, le site ne propose plus le zip
     const curseforge = curseforgeSur(a.curseforge);
     return { id, nom: a.nom || (typeof G.nom === "string" && G.nom.trim()) || NOM_ADDON_METIERS, icone: a.icone || "inv_misc_book_11", desc: a.desc || null,
-      version: G.version || a.version ? String(G.version || a.version) : null, maj: G.maj || a.maj || null, curseforge,
+      version: G.version || a.version ? String(G.version || a.version) : null, maj: G.maj || a.maj || null, curseforge, installer: curseforge ? installerSur(G.installer) : null,
       fichier: curseforge ? null : fichierSur(G.fichier) || fichierSur(a.fichier) || (id === ADDON_METIERS ? ZIP_DEFAUT : null),
       nouveautes: nouveautes.filter((n) => n && (n.texte || n.version)) };
   }
@@ -1188,12 +1190,14 @@
     const date = A.version && A.maj ? dateLongue(A.maj) : null;
     if (A.curseforge) {
       return cadre("Installer", h("div", { class: "gd-telecharger" },
-        h("a", { class: "btn gd-gros-bouton", href: A.curseforge, target: "_blank", rel: "noopener" }, icone(A.icone, "md"), "Installer avec CurseForge"),
+        h("a", { class: "btn gd-gros-bouton", href: A.installer || A.curseforge, target: "_blank", rel: "noopener" }, icone(A.icone, "md"), A.installer ? "Installer avec l'appli CurseForge" : "Installer avec CurseForge"),
         A.version ? h("p", { class: "gd-version" }, "Version ", h("b", {}, A.version), date ? ` · ${date}` : null) : null,
         h("ol", { class: "gd-etapes-cf" },
-          h("li", {}, "Ouvre la page de l'addon sur CurseForge et clique sur ", h("b", {}, "Installer"), " : l'appli CurseForge l'ajoute à ton jeu (WoW Forever)."),
+          A.installer ? h("li", {}, "Clique sur le bouton : ton navigateur propose d'ouvrir l'appli CurseForge, qui installe l'addon dans WoW Forever.")
+            : h("li", {}, "Ouvre la page de l'addon sur CurseForge et clique sur ", h("b", {}, "Installer"), " : l'appli CurseForge l'ajoute à ton jeu (WoW Forever)."),
           h("li", {}, "Les mises à jour arrivent ensuite d'elles-mêmes dans l'appli, comme pour tes autres addons.")),
-        h("p", { class: "gd-texte muted" }, "La page n'apparaît pas dans la recherche de CurseForge : seuls ceux qui ont ce lien la trouvent.", texte ? ` ${texte}` : null)));
+        h("p", { class: "gd-texte muted" }, A.installer ? ["Pas encore l'appli ? La page qui s'ouvre propose de la télécharger. Ou passe par ", h("a", { href: A.curseforge, target: "_blank", rel: "noopener" }, "la page de l'addon"), " pour télécharger le zip. "] : null,
+          "La page n'apparaît pas dans la recherche de CurseForge : seuls ceux qui ont ce lien la trouvent.", texte ? ` ${texte}` : null)));
     }
     return cadre("Télécharger", h("div", { class: "gd-telecharger" },
       A.fichier ? h("a", { class: "btn gd-gros-bouton", href: A.fichier, download: "" }, icone(A.icone, "md"), "Télécharger l'addon")
@@ -1221,7 +1225,7 @@
         h("div", { class: "gd-addon-tete" }, icone(A.icone, "lg"), h("div", { class: "gd-addon-txt" }, h("h2", {}, h("a", { href: lienAddon(A.id) }, A.nom)),
           A.version ? h("p", { class: "gd-version" }, "Version ", h("b", {}, A.version), date ? ` · ${date}` : null) : null)),
         A.desc ? h("p", { class: "gd-addon-desc" }, A.desc) : null,
-        h("div", { class: "gd-addon-actions" }, A.curseforge ? h("a", { class: "btn", href: A.curseforge, target: "_blank", rel: "noopener" }, "Installer avec CurseForge")
+        h("div", { class: "gd-addon-actions" }, A.curseforge ? h("a", { class: "btn", href: A.installer || A.curseforge, target: "_blank", rel: "noopener" }, A.installer ? "Installer avec l'appli CurseForge" : "Installer avec CurseForge")
           : A.fichier ? h("a", { class: "btn", href: A.fichier, download: "" }, "Télécharger") : null,
           h("a", { class: "btn ghost", href: lienAddon(A.id) }, "En savoir plus ›")));
     })));
