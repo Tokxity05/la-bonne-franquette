@@ -87,7 +87,7 @@ async function envoyer(req, env, origine) {
   const e = await empreinte(c.cle);
   const connue = await env.FICHES.get(`cle:${k}`);
   if (connue && connue !== e) {
-    return non(`Ce code ne vient pas du même jeu que le premier envoi de ${c.nom}. Si tu as réinstallé l'addon ou changé d'ordinateur, demande à un officier de remettre ta fiche à zéro.`, 403);
+    return non(`Ce code ne vient pas du même jeu que le premier envoi de ${c.nom}. Si tu as réinstallé l'addon ou changé d'ordinateur, demande à Tokxity de remettre ta fiche à zéro.`, 403);
   }
   const doc = await lireDoc(env);
   const deja = Object.keys(doc.fiches).find((n) => plier(n) === k);
