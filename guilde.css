@@ -524,7 +524,6 @@ a.q-common:hover, a.q-uncommon:hover, a.q-rare:hover, a.q-epic:hover { text-deco
   margin-top: 10px; padding: 3px 14px; font-size: .78rem; font-weight: 600; letter-spacing: .03em; font-variant-numeric: tabular-nums;
   color: var(--or-pale); background: rgba(233, 199, 126, .07); border: 1px solid rgba(233, 199, 126, .32); border-radius: 999px;
 }
-.gd-voir { display: inline-flex; align-items: center; min-height: 32px; margin-top: 8px; padding: 0 12px; font-size: .88rem; font-weight: 500; }
 
 /* La grande recherche « Qui sait faire… ? » */
 .gd-cherche {
@@ -642,8 +641,6 @@ a.gd-membre:hover, a.gd-qui:hover { background: var(--survol); text-decoration: 
 .gd-nv-qui { font-weight: 600; }
 .gd-nv-neuf { display: inline-block; margin-left: 8px; padding: 0 7px; border: 1px solid rgba(233, 199, 126, .45); border-radius: 999px; font-size: .7rem; font-weight: 600; line-height: 1.6; color: var(--or); vertical-align: 1px; }
 .gd-nv-date { font-size: .78rem; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--texte-3); cursor: default; }
-.gd-nv-bas { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
-.gd-nv-bas:empty { display: none; }
 .gd-histo-vide { margin: 0; padding: 2px 4px; font-size: .9rem; font-style: italic; color: var(--texte-3); }
 .gd-badge-neuf { flex: none; padding: 1px 10px; font-size: .72rem; font-weight: 600; white-space: nowrap; color: var(--or-pale); background: rgba(233, 199, 126, .08); border: 1px solid rgba(233, 199, 126, .45); border-radius: 999px; }
 
@@ -1069,7 +1066,7 @@ a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
 @media (pointer: coarse) {
   .lv-rec, .lv-cat { min-height: 40px; }
   .gd-puce { min-height: 34px; }
-  .gd-classes-legende a, .gd-officielle, .gd-badge-metiers, .gd-voir { min-height: 34px; }
+  .gd-classes-legende a, .gd-officielle, .gd-badge-metiers { min-height: 34px; }
   .gd-perso-nom { display: inline-flex; align-items: center; min-width: 32px; min-height: 32px; }
   /* Un composant cherché dans Métiers : son icône et son nom mènent à Wowhead */
   .gd-res-comp .gd-res-ic { display: inline-grid; place-items: center; min-width: 32px; min-height: 32px; margin: -5px; }
