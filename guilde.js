@@ -432,7 +432,7 @@
   const nomClasse = (c) => CLASSES[c] || "Classe inconnue";
   function pageAccueil() {
     setTitre(null);
-    const nouveautes = D || ERREUR === "vide" ? blocNouveautes("Dernières nouveautés des métiers", 5, "#/metiers?voir=nouveautes") : null;
+    const nouveautes = D || ERREUR === "vide" ? blocNouveautes("Dernières nouveautés des métiers") : null;
     vue.append(
       h("div", { class: "gd-hero" }, logoHero(), h("h1", {}, CFG.nom), CFG.accroche ? h("p", { class: "gd-hero-guilde" }, CFG.accroche) : null,
         h("div", { class: "gd-separateur", "aria-hidden": "true" }),
@@ -750,7 +750,7 @@
     const titre = rubrique("metiers").titre;
     setTitre(titre);
     if (!D) { vue.append(fil(h("span", {}, titre)), enteteRubrique("metiers", rubrique("metiers").desc, encartAddon(), encartEnvoi()), carnetVide()); return; }
-    const nouveautes = blocNouveautes("Les dernières nouveautés", 5, null, 10);
+    const nouveautes = blocNouveautes("Les dernières nouveautés");
     const nRec = IX.recherche.recettes.length;
     const resume = [pl(D.membres.length, "membre"), `${nRec} recette${nRec > 1 ? "s" : ""} connue${nRec > 1 ? "s" : ""}`, D.maj && quand(D.maj) ? `mis à jour ${quand(D.maj)}` : null].filter(Boolean).join(", ");
     const metiers = listeMetiers();
@@ -868,20 +868,13 @@
         l.neuf ? h("span", { class: "gd-nv-neuf", title: "Personne dans la guilde ne la connaissait" }, "Nouveau") : null),
       date);
   }
-  // Le bloc : au plus max lignes ; avec pas, un bouton en montre pas de plus ; vide, une phrase (le bloc reste, pour qu'on sache qu'il existe) ;
-  // « Tout voir » vers la rubrique Métiers
-  function blocNouveautes(titre, max, tout, pas) {
-    const L = lignesNouveautes();
-    const liste = h("ul", { class: "gd-nv-liste" });
-    const bas = h("div", { class: "gd-nv-bas" });
-    const montrer = (n) => {
-      fill(liste, L.slice(0, n).map(ligneNouveaute));
-      fill(bas, pas && L.length > n ? h("button", { type: "button", class: "gd-plus", onclick: () => { montrer(n + pas); infobulles(); } },
-        `Voir ${Math.min(pas, L.length - n)} de plus`) : null,
-      tout && L.length ? h("a", { class: "gd-voir", href: tout }, "Tout voir ›") : null);
-    };
-    montrer(max);
-    const bloc = cadre(titre, L.length ? [liste, bas] : h("p", { class: "gd-histo-vide" }, "Les nouvelles recettes apprises par les membres apparaîtront ici."));
+  // Le bloc : les max dernières lignes, rien de plus (20/11, Melvin : « 5, 6 lignes, et après ça s'efface petit à petit, pas d'historique ») ;
+  // vide, une phrase (le bloc reste, pour qu'on sache qu'il existe)
+  const NOUVEAUTES_MAX = 6;
+  function blocNouveautes(titre) {
+    const L = lignesNouveautes().slice(0, NOUVEAUTES_MAX);
+    const bloc = cadre(titre, L.length ? h("ul", { class: "gd-nv-liste" }, L.map(ligneNouveaute))
+      : h("p", { class: "gd-histo-vide" }, "Les nouvelles recettes apprises par les membres apparaîtront ici."));
     bloc.classList.add("gd-nouveautes-metiers");
     return bloc;
   }
