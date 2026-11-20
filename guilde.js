@@ -1264,9 +1264,9 @@
             point("Il ne ralentit pas le jeu", h("p", {}, "Rien en continu : une lecture quand tu ouvres une fenêtre de métier, et l'envoi de ta fiche à la connexion ou quand tu apprends une recette, en quelques petits messages espacés.")),
             point("Tu restes maître", h("p", {}, "Un bouton rond près de la mini-carte montre que l'addon tourne : au survol, ce qui est partagé et si le partage est actif ; clic droit pour le mettre en pause (l'icône devient grise)."), h("p", {}, h("code", {}, "/lbf pause"), " : plus rien ne part, et ta fiche s'efface chez les membres connectés. ", h("code", {}, "/lbf reprendre"), " relance le partage."),
               h("p", {}, "Pour que tes métiers disparaissent aussi du site, mets l'addon en pause, puis colle ton code de /lbf code dans Envoyer mes métiers (en pause, il efface ta fiche), ou demande à Tokxity : il l'efface sur demande. Personne n'est obligé de l'installer.")),
-            point("Vérifier par toi-même", h("p", {}, A.curseforge ? "Le code est en clair : tu peux le lire ici, ou dans le dossier de l'addon avec le Bloc-notes."
-              : "Le code est en clair : tu peux le lire ici, ou dans le zip avec le Bloc-notes."),
-              h("div", { class: "gd-docs" }, doc("addon/LISEZMOI.txt", "Lire le LISEZMOI"), doc("addon/MetierLBF.lua.txt", "Lire le code de l'addon"))))),
+            point("Vérifier par toi-même", h("p", {}, A.curseforge ? "Le code est en clair dans le dossier de l'addon : tu peux l'ouvrir avec le Bloc-notes."
+              : "Le code est en clair dans le zip : tu peux l'ouvrir avec le Bloc-notes."),
+              h("div", { class: "gd-docs" }, doc("addon/LISEZMOI.txt", "Lire le LISEZMOI"))))),
         // Melvin (18/11) : « les gens savent installer un addon » ; reste la seule chose propre à celui-ci
         blocTelecharger(A, "Une fois installé, ouvre une fois chacun de tes métiers : c'est tout."),
         blocNouveautesAddon(A),
