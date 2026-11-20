@@ -737,9 +737,8 @@
     }
     if (!L.length) return null;
     L.sort((a, b) => (b.pretes > 0) - (a.pretes > 0) || a.qui[0].st.reste - b.qui[0].st.reste || a.r.n.localeCompare(b.r.n, "fr"));
-    const n = L.filter((l) => l.pretes).length;
-    return cadre(n ? `Prêtes maintenant (${n})` : "Les recharges",
-      h("p", { class: "muted small gd-rch-aide" }, "Les recettes à recharge de la guilde, et qui peut les lancer aujourd'hui, d'après le dernier relevé de chacun."),
+    // Melvin (20/11) : un titre court, rien dessous
+    return cadre("Liste des CD",
       h("div", { class: "gd-rch" }, L.map(({ id, r, qui }) => h("div", { class: "gd-rch-ligne" },
         lienRecette(id, [icone(r.i, "sm", r.k === "spell" ? null : r.q), h("span", { class: `gd-res-nom q-${couleurNom(r)}` }, r.n),
           h("span", { class: "gd-res-sous" }, `${nomMetier(r.m)} · recharge de ${dureeRecharge(r.cd)}`)], "gd-rch-recette"),
