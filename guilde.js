@@ -1350,8 +1350,7 @@
         champ, apercu, h("div", { class: "gd-code-actions" }, bouton), retour),
       cadre("Ce qui part",
         h("p", { class: "gd-pourquoi" }, "Exactement ce que l'addon partage déjà avec la guilde : ton nom, ta classe, tes métiers et ta spécialisation, tes recettes et tes recharges. Rien d'autre."),
-        h("p", { class: "muted small" }, "Le code porte aussi une petite clé tirée au hasard par ton addon et gardée seulement chez toi : elle prouve au site que c'est bien toi. Ton perso doit être dans la liste de la guilde (rubrique Membres). Addon en pause, le code efface ta fiche."),
-        h("div", { class: "gd-docs" }, h("a", { class: "btn ghost", href: "service/worker.js", target: "_blank", rel: "noopener" }, "Lire le code du relais")))));
+        h("p", { class: "muted small" }, "Le code porte aussi une petite clé tirée au hasard par ton addon et gardée seulement chez toi : elle prouve au site que c'est bien toi. Ton perso doit être dans la liste de la guilde (rubrique Membres). Addon en pause, le code efface ta fiche."))));
     if (SURVOL) setTimeout(() => { try { champ.focus({ preventScroll: true }); } catch (e) { champ.focus(); } }, 0);
   }
 
