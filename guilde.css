@@ -1113,7 +1113,6 @@ kbd {
 }
 
 /* ---------------------------------------------------------------- Prêtes maintenant : les recharges de la guilde */
-.gd-rch-aide { margin: 0 0 10px; }
 .gd-rch { display: grid; gap: 2px; }
 .gd-rch-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; min-height: 54px; padding: 8px 12px; border-radius: 12px; transition: background-color .2s; }
 .gd-rch-ligne:hover { background: var(--survol); }
