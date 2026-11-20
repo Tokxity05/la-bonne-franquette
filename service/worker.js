@@ -98,13 +98,13 @@ async function envoyer(req, env, origine) {
     doc.oublis[c.nom] = maintenant;
     doc.maj = maintenant;
     await env.FICHES.put("fiches", JSON.stringify(doc));
-    return json({ ok: true, oubli: true, nom: c.nom, message: `C'est fait : la fiche est effacée. ${c.nom} disparaîtra aussi du carnet des métiers à la prochaine publication.` }, 200, origine);
+    return json({ ok: true, oubli: true, nom: c.nom, message: `C'est fait : la fiche de ${c.nom} est effacée du site.` }, 200, origine);
   }
   let guilde;
   try { guilde = await membres(env); } catch (err) {
     return non("La liste des membres de la guilde ne répond pas pour l'instant : réessaie dans quelques minutes.", 503);
   }
-  if (!guilde.has(k)) return non(`${c.nom} n'est pas (encore) dans la liste de la guilde. Elle est relue sur l'armurerie officielle toutes les 6 heures : réessaie plus tard.`, 403);
+  if (!guilde.has(k)) return non(`${c.nom} n'est pas (encore) dans la liste de la guilde. Elle est relue sur l'armurerie officielle toutes les heures : réessaie plus tard.`, 403);
   const ancien = deja ? doc.fiches[deja] : null;
   if (ancien && ancien.f === c.fiche) {
     return json({ ok: true, nom: c.nom, fiche: c.fiche, recu: ancien.recu, message: "Rien de neuf : le site a déjà cette fiche." }, 200, origine);
