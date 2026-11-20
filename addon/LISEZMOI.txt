@@ -22,7 +22,7 @@ C'est tout. Ces informations, tes compagnons de guilde peuvent déjà les voir e
 ta fenêtre de métier. L'addon les rassemble seulement au même endroit.
 
 Il fait aussi passer, de membre en membre, les fiches des autres qu'il a déjà reçues (les mêmes informations,
-rien de plus) : comme ça, tout le monde finit par arriver sur le site, même sans croiser l'officier qui le publie.
+rien de plus) : comme ça, tout le monde finit par arriver sur le site.
 
 Il lit aussi la liste des membres de la guilde, sur place, sans jamais l'envoyer : elle sert seulement à
 oublier ceux qui ont quitté la guilde, et à connaître le nom des rangs de la guilde pour le site.
@@ -42,8 +42,8 @@ Ce qu'il ne fait JAMAIS
 Comment le site est mis à jour
 ------------------------------
 Chaque exemplaire de l'addon garde ce que les autres membres lui envoient, et le fait passer aux membres
-qu'il croise. L'exemplaire d'un officier sert de relais : son ordinateur publie le carnet sur le site.
-Tu y arrives tout seul, petit à petit, au fil de tes connexions.
+qu'il croise. Tu arrives ainsi sur le site tout seul,
+petit à petit, au fil de tes connexions.
 
 Si tu veux que le site te voie tout de suite, sans attendre : tape /lbf code, copie le texte qui s'affiche
 (Ctrl+C) et colle-le sur le site, rubrique Métiers › Envoyer mes métiers. C'est toi qui le fais, quand tu
@@ -75,7 +75,7 @@ est actif, le dernier envoi. Clic droit : pause ou reprise (l'icône devient gri
 /lbf bouton        cacher ou remettre le bouton de la mini-carte
 
 Pour disparaître aussi du site, mets l'addon en pause puis colle le code de /lbf code sur le site (en pause,
-il efface ta fiche), ou préviens un officier.
+il efface ta fiche).
 Pour ne pas l'utiliser du tout, ne l'installe pas, ou décoche-le dans la liste des addons. Personne n'est obligé.
 
 
