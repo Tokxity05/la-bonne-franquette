@@ -75,7 +75,7 @@ est actif, le dernier envoi. Clic droit : pause ou reprise (l'icône devient gri
 /lbf bouton        cacher ou remettre le bouton de la mini-carte
 
 Pour disparaître aussi du site, mets l'addon en pause puis colle le code de /lbf code sur le site (en pause,
-il efface ta fiche).
+il efface ta fiche), ou demande à Tokxity : il l'efface sur demande.
 Pour ne pas l'utiliser du tout, ne l'installe pas, ou décoche-le dans la liste des addons. Personne n'est obligé.
 
 
