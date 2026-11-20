@@ -481,10 +481,8 @@
     const titre = rubrique("membres").titre;
     setTitre(titre);
     const tous = listeRoster().sort(parRangPerso);
-    // l'heure aussi (« aujourd'hui à 17:05 ») : le robot de GitHub la relit toutes les heures, la date seule ne disait pas si c'était frais
-    const maj = R && R.maj ? quand(R.maj) : null;
-    const ligne = R ? `D'après l'armurerie officielle de Blizzard, relue par le site toutes les heures${maj ? ` (dernière fois ${maj})` : ""}. Un niveau change quand l'armurerie le montre, souvent après la déconnexion du joueur.`
-      : ERREUR_R ? "La liste de l'armurerie officielle n'a pas pu être lue : seuls les membres qui partagent leurs métiers sont là." : null;
+    // Melvin (20/11) : pas d'explication sous le titre, seulement un mot quand la liste manque
+    const ligne = !R && ERREUR_R ? "La liste des membres n'a pas pu être lue." : null;
     vue.append(fil(h("span", {}, titre)), enteteRubrique("membres", ligne));
     if (!tous.length) {
       vue.append(h("div", { class: "stack" }, cadre(null, h("div", { class: "gd-vide" }, h("p", {}, ERREUR_R === "fichier"
