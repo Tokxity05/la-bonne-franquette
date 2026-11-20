@@ -641,7 +641,7 @@
       ? "Le navigateur refuse de lire les données depuis un fichier de ton disque : ouvre le site par son adresse web."
       : ERREUR === "lecture"
         ? "Les métiers de la guilde n'ont pas pu être lus. Réessaie dans un instant."
-        : `Aucun membre n'a encore partagé ses métiers. Installe l'addon ${nomAddonMetiers()} et ouvre une fois chacun de tes métiers en jeu : le carnet se remplira au prochain relais.`;
+        : `Aucun membre n'a encore partagé ses métiers. Installe l'addon ${nomAddonMetiers()} et ouvre une fois chacun de tes métiers en jeu : le carnet se remplira à la prochaine mise à jour du site.`;
     return h("div", { class: "stack" }, cadre("Le carnet est encore vide", h("div", { class: "gd-vide" }, h("p", {}, texte),
       h("div", { class: "gd-docs" }, h("a", { class: "btn", href: lienAddon(ADDON_METIERS) }, (infoAddon() || {}).curseforge ? "Installer l'addon" : "Télécharger l'addon"),
         CFG.service ? h("a", { class: "btn ghost", href: "#/metiers/envoyer" }, "Envoyer mes métiers") : null))));
@@ -1262,13 +1262,13 @@
                 h("li", {}, "Il n'envoie rien sur internet : il parle seulement aux addons des membres, par le canal caché de la guilde, comme le font DBM ou Details."),
                 h("li", {}, "Il ne touche à rien dans le jeu : il lit ta fenêtre de métier quand tu l'ouvres, sans rien y changer, et jamais en combat.")))),
           h("div", { class: "gd-points" },
-            point("Comment les métiers sont mis à jour", h("p", {}, "Chaque exemplaire garde ce que les autres membres lui envoient, et le fait passer aux membres qu'il croise. Celui d'un officier fait le relais : son ordinateur publie le carnet ici. Tes métiers arrivent ainsi sur le site tout seuls, petit à petit, au fil de tes connexions."),
+            point("Comment les métiers sont mis à jour", h("p", {}, "Chaque exemplaire garde ce que les autres membres lui envoient, et le fait passer aux membres qu'il croise. Tes métiers arrivent ainsi sur le site tout seuls, petit à petit, au fil des connexions."),
               h("p", {}, "L'addon lit aussi la liste des membres de la guilde, sur place, sans l'envoyer : ceux qui partent disparaissent du site. Il y prend le nom des rangs de la guilde, pour la rubrique Membres.")),
-            point("Apparaître tout de suite", h("p", {}, "Sans attendre le relais : tape ", h("code", {}, "/lbf code"), " en jeu, copie le texte et colle-le dans ",
+            point("Apparaître tout de suite", h("p", {}, "Sans attendre : tape ", h("code", {}, "/lbf code"), " en jeu, copie le texte et colle-le dans ",
               CFG.service ? h("a", { href: "#/metiers/envoyer" }, "Métiers › Envoyer mes métiers") : "Métiers › Envoyer mes métiers", ". C'est toi qui le fais, quand tu veux : l'addon, lui, n'envoie toujours rien sur internet.")),
             point("Il ne ralentit pas le jeu", h("p", {}, "Rien en continu : une lecture quand tu ouvres une fenêtre de métier, et l'envoi de ta fiche à la connexion ou quand tu apprends une recette, en quelques petits messages espacés.")),
             point("Tu restes maître", h("p", {}, "Un bouton rond près de la mini-carte montre que l'addon tourne : au survol, ce qui est partagé et si le partage est actif ; clic droit pour le mettre en pause (l'icône devient grise)."), h("p", {}, h("code", {}, "/lbf pause"), " : plus rien ne part, et ta fiche s'efface chez les autres. ", h("code", {}, "/lbf reprendre"), " relance le partage."),
-              h("p", {}, "Pour que tes métiers disparaissent aussi du site, mets l'addon en pause et préviens un officier. Personne n'est obligé de l'installer.")),
+              h("p", {}, "Pour que tes métiers disparaissent aussi du site, mets l'addon en pause, puis colle ton code de /lbf code dans Envoyer mes métiers (en pause, il efface ta fiche). Personne n'est obligé de l'installer.")),
             point("Vérifier par toi-même", h("p", {}, A.curseforge ? "Le code est en clair : tu peux le lire ici, ou dans le dossier de l'addon avec le Bloc-notes."
               : "Le code est en clair : tu peux le lire ici, ou dans le zip avec le Bloc-notes."),
               h("div", { class: "gd-docs" }, doc("addon/LISEZMOI.txt", "Lire le LISEZMOI"), doc("addon/MetierLBF.lua.txt", "Lire le code de l'addon"))))),
