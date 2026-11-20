@@ -15,7 +15,7 @@
   "rubriques": [
     { "id": "membres", "titre": "Membres", "icone": "achievement_guildperk_everybodysfriend", "desc": "Les membres de la guilde, leur classe, leur niveau et leur fiche officielle." },
     { "id": "metiers", "titre": "Métiers", "icone": "trade_blacksmithing", "desc": "Qui sait fabriquer quoi : les recettes de tous les membres mises en commun." },
-    { "id": "addons", "titre": "Addons", "icone": "inv_misc_gear_01", "desc": "Les addons de la guilde, à télécharger." }
+    { "id": "addons", "titre": "Addons", "icone": "inv_misc_gear_01", "desc": "Les addons de la guilde, à installer." }
   ],
   "addons": [
     { "id": "metier-lbf", "nom": "Métiers LBF", "icone": "trade_blacksmithing", "desc": "Partage tes métiers et tes recettes avec la guilde : c'est lui qui remplit la rubrique Métiers.", "fichier": "MetierLBF.zip", "curseforge": "https://www.curseforge.com/wow/addons/metiers-lbf" }
