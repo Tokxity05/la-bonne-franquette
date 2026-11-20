@@ -88,11 +88,12 @@ Bloc-notes. Le site de la guilde le montre aussi (rubrique « Addons »).
 
 Installer
 ---------
-Le plus simple : avec l'appli CurseForge. Ouvre la page de l'addon (le lien est sur le site de la guilde,
-rubrique « Addons ») et clique sur « Installer » : l'appli l'ajoute à WoW Forever, puis le tient à jour.
+Le plus simple : avec l'appli CurseForge. Sur le site de la guilde, rubrique « Addons », clique sur
+« Installer avec l'appli CurseForge » : ton navigateur propose d'ouvrir l'appli, qui l'ajoute à WoW Forever,
+puis le tient à jour.
 La page n'apparaît pas dans la recherche de CurseForge : seuls ceux qui ont le lien la trouvent.
 
-À la main : télécharge le zip sur cette même page, puis
+À la main : télécharge le zip sur la page de l'addon sur CurseForge, puis
 1. Décompresse-le dans  World of Warcraft\_forever_\Interface\AddOns\
    (tu dois obtenir le dossier  ...\AddOns\MetierLBF\ , avec MetierLBF.toc et MetierLBF.lua dedans).
 2. Lance le jeu. À l'écran des personnages, bouton « AddOns » : coche « Métiers LBF »
