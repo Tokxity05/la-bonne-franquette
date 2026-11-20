@@ -42,7 +42,8 @@
   // Ligne de compétence du jeu -> métier : les fiches au format de l'addon (codes collés)
   const LIGNES = { 129: "firstaid", 164: "blacksmithing", 165: "leatherworking", 171: "alchemy", 182: "herbalism", 185: "cooking", 186: "mining",
     197: "tailoring", 202: "engineering", 333: "enchanting", 356: "fishing", 393: "skinning" };
-  const RECOLTE = new Set(["herbalism", "mining", "skinning", "fishing"]);
+  // La Pêche n'en est plus : dans Forever, elle fabrique (bocal, râtelier, hutte de pêche)
+  const RECOLTE = new Set(["herbalism", "mining", "skinning"]);
   const QUALITES = new Set(["poor", "common", "uncommon", "rare", "epic", "legendary", "artifact"]);
   const EMPLACEMENTS = { Head: "Tête", Neck: "Cou", Shoulder: "Épaules", Back: "Dos", Cloak: "Dos", Chest: "Torse", Robe: "Torse", Shirt: "Chemise", Tabard: "Tabard",
     Wrist: "Poignets", Hands: "Mains", Waist: "Taille", Legs: "Jambes", Feet: "Pieds", Finger: "Doigt", Trinket: "Bijou", "Main Hand": "Main droite",
