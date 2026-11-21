@@ -13,7 +13,8 @@
      #/membre/<clé>[/<métier>[/<recette>]]   un membre : son profil, puis sa fenêtre de métier s'il partage ses métiers (clé = nom, nom-surnom si deux membres portent le même nom)
      #/metiers[?q=…]             la rubrique Métiers : « Qui sait faire… ? », les métiers, les nouveautés, les derniers membres vus
      #/metiers/envoyer           coller son code (/lbf code) pour apparaître tout de suite
-     #/metiers/emplacement/<clé> ce que la guilde sait faire pour un emplacement (tête, torse, armes…) : pièces et enchantements
+     #/metiers/emplacement/<clé>[/<type>] ce que la guilde sait faire pour un emplacement (tête, torse, armes…) : pièces et enchantements ;
+       <type> = tissu, cuir, mailles, plaques, epee, baguette, libram… (r.ty, d'après le client)
      #/metier/<clé>              un métier : ses recettes dans la guilde, ses membres
      #/recette/<id>              une recette et qui sait la faire
      #/addons                    les addons de la guilde
@@ -361,7 +362,8 @@
   function detailRecette(id, { titre = "div", membre = null, lienQui = false } = {}) {
     const r = D.recettes[id];
     const [t, n] = whDe(r, id);
-    const sous = r.k !== "spell" ? [EMPLACEMENTS[r.slot] || r.slot || null, r.req ? `niveau ${r.req} requis` : null, r.ilvl ? `niveau d'objet ${r.ilvl}` : null].filter(Boolean).join(" · ") : "";
+    const ty = typePiece(id);
+    const sous = r.k !== "spell" ? [EMPLACEMENTS[r.slot] || r.slot || null, ty && !["bouclier", "tenu"].includes(ty) ? TYPE_PIECE.get(ty).s : null, r.req ? `niveau ${r.req} requis` : null, r.ilvl ? `niveau d'objet ${r.ilvl}` : null].filter(Boolean).join(" · ") : "";
     const stats = lignesStats(r.st);
     const co = (Array.isArray(r.co) ? r.co : []).filter((c) => Array.isArray(c) && c[0]);
     let quiLigne = null;
@@ -650,20 +652,40 @@
   const EMPLACEMENTS_GUILDE = [["tete", "Tête", "inv_helmet_47"], ["cou", "Cou", "inv_jewelry_amulet_07"], ["epaules", "Épaules", "inv_shoulder_23"],
     ["dos", "Dos", "inv_misc_cape_02"], ["torse", "Torse", "inv_chest_chain_09"], ["poignets", "Poignets", "inv_bracer_07"], ["mains", "Mains", "inv_gauntlets_05"],
     ["taille", "Taille", "inv_belt_06"], ["jambes", "Jambes", "inv_pants_06"], ["pieds", "Pieds", "inv_boots_05"], ["bijou", "Bijou", "inv_misc_enggizmos_02"],
-    ["armes", "Armes", "inv_weapon_shortblade_05"], ["main-gauche", "Main gauche", "inv_shield_22"], ["relique", "Relique", "inv_relics_libramofhope"],
+    ["armes", "Armes", "inv_weapon_shortblade_05"], ["main-gauche", "Main gauche", "inv_shield_22"], ["distance", "Distance / relique", "inv_wand_07"],
     ["sacs", "Sacs", "inv_misc_bag_10_red"]];
   const SLOT_EMPLACEMENT = { Head: "tete", Neck: "cou", Shoulder: "epaules", Back: "dos", Cloak: "dos", Chest: "torse", Robe: "torse", Wrist: "poignets", Hands: "mains",
-    Waist: "taille", Legs: "jambes", Feet: "pieds", Trinket: "bijou", "Main Hand": "armes", "One-Hand": "armes", "Two-Hand": "armes", Ranged: "armes", Thrown: "armes",
-    "Off Hand": "main-gauche", "Held In Off-hand": "main-gauche", Shield: "main-gauche", Relic: "relique", Bag: "sacs" };
+    Waist: "taille", Legs: "jambes", Feet: "pieds", Trinket: "bijou", "Main Hand": "armes", "One-Hand": "armes", "Two-Hand": "armes", Ranged: "distance", Thrown: "distance",
+    Ammo: "distance", "Off Hand": "main-gauche", "Held In Off-hand": "main-gauche", Shield: "main-gauche", Relic: "distance", Bag: "sacs" };
   // Sans emplacement relevé : la catégorie de la fenêtre de métier (sans accents ni majuscules) ; les huiles et les pierres, temporaires, n'y sont pas
   const CATEGORIE_EMPLACEMENT = [[/^enchantements de torse/, ["torse"]], [/^enchantements de brassards/, ["poignets"]], [/^enchantements de gants/, ["mains"]],
     [/^enchantements de bottes/, ["pieds"]], [/^enchantements d.arme/, ["armes"]], [/^enchantements (de bouclier|d.objet en main gauche)/, ["main-gauche"]],
-    [/^enchantements d.amulette/, ["cou"]], [/^enchantements de cape/, ["dos"]], [/^lunettes de visee/, ["armes"]], [/^renforts d.armure/, ["torse", "mains", "jambes", "pieds"]],
+    [/^enchantements d.amulette/, ["cou"]], [/^enchantements de cape/, ["dos"]], [/^lunettes de visee/, ["distance"]], [/^renforts d.armure/, ["torse", "mains", "jambes", "pieds"]],
     [/^(sacs|carquois|gibernes)/, ["sacs"]], [/^(casques|chaperons|couvre-chefs)/, ["tete"]], [/^(espauliers|spallieres)/, ["epaules"]], [/^capes/, ["dos"]],
     [/^(corselets|robes)/, ["torse"]], [/^brassards/, ["poignets"]], [/^(gantelets|gants)/, ["mains"]], [/^ceintures/, ["taille"]], [/^(garde-jambes|jambieres)/, ["jambes"]],
     [/^(bottes|chaussures)/, ["pieds"]]];
   // Ce qui se pose sur une pièce (enchantement, renfort, lunette), à part des pièces elles-mêmes
   const POSE = /^(enchantements|renforts d.armure|lunettes de visee)/;
+  // Le type d'une pièce (r.ty, d'après le client) : la rangée de choix d'un emplacement, et la ligne de chaque pièce ; [clé, pluriel, singulier]
+  const TYPES_PIECE = [["tissu", "Tissu"], ["cuir", "Cuir"], ["mailles", "Mailles"], ["plaques", "Plaques"],
+    ["epee", "Épées", "Épée"], ["hache", "Haches", "Hache"], ["masse", "Masses", "Masse"], ["dague", "Dagues", "Dague"], ["pugilat", "Armes de pugilat", "Arme de pugilat"],
+    ["baton", "Bâtons", "Bâton"], ["hast", "Armes d'hast", "Arme d'hast"], ["bouclier", "Boucliers", "Bouclier"], ["tenu", "Tenues en main", "Tenu en main gauche"],
+    ["baguette", "Baguettes", "Baguette"], ["arc", "Arcs", "Arc"], ["fusil", "Fusils", "Fusil"], ["arbalete", "Arbalètes", "Arbalète"], ["jet", "Armes de jet", "Arme de jet"],
+    ["fleches", "Flèches"], ["balles", "Balles"], ["libram", "Librams", "Libram"], ["idole", "Idoles", "Idole"], ["totem", "Totems", "Totem"]];
+  const TYPE_PIECE = new Map(TYPES_PIECE.map(([k, p, s]) => [k, { p, s: s || p }]));
+  const MAINS = { "One-Hand": "à une main", "Main Hand": "à une main", "Two-Hand": "à deux mains" };
+  function typePiece(id) {
+    const r = D.recettes[id];
+    if (!r || r.k === "spell") return null;
+    return TYPE_PIECE.has(r.ty) ? r.ty : r.slot === "Held In Off-hand" ? "tenu" : null;
+  }
+  // « Tissu », « Épée à deux mains », « Baguette »
+  function nomType(id) {
+    const t = typePiece(id);
+    if (!t) return null;
+    const m = ["epee", "hache", "masse"].includes(t) ? MAINS[D.recettes[id].slot] : null;
+    return m ? `${TYPE_PIECE.get(t).s} ${m}` : TYPE_PIECE.get(t).s;
+  }
   function emplacementsDe(id) {
     const r = D.recettes[id];
     if (!r) return [];
@@ -675,15 +697,21 @@
   function indexEmplacements() {
     if (IX.emplacements) return IX.emplacements;
     IX.emplacements = new Map();
-    for (const id of IX.quiSait.keys()) for (const e of emplacementsDe(id)) pousser(IX.emplacements, e, id);
+    IX.typesEmpl = new Map();  // emplacement -> types de ses pièces
+    for (const id of IX.quiSait.keys()) for (const e of emplacementsDe(id)) {
+      pousser(IX.emplacements, e, id);
+      const t = typePiece(id);
+      if (t) (IX.typesEmpl.get(e) || IX.typesEmpl.set(e, new Set()).get(e)).add(t);
+    }
     return IX.emplacements;
   }
   // La rangée des emplacements où la guilde sait faire quelque chose (sous « Qui sait faire… ? » et en tête de la page)
-  function rangeeEmplacements(actif) {
+  function rangeeEmplacements(actif, type) {
     const ix = indexEmplacements();
     const L = EMPLACEMENTS_GUILDE.filter(([cle]) => ix.has(cle));
+    const garde = (cle) => (type && (IX.typesEmpl.get(cle) || new Set()).has(type) ? `/${type}` : "");
     return L.length ? h("nav", { class: "gd-empl", "aria-label": "Par emplacement" }, L.map(([cle, nom, ic]) => h("a", {
-      class: `gd-empl-lien${cle === actif ? " actif" : ""}`, href: `#/metiers/emplacement/${cle}`, "aria-current": cle === actif ? "page" : null, title: pl(ix.get(cle).length, "recette") },
+      class: `gd-empl-lien${cle === actif ? " actif" : ""}`, href: `#/metiers/emplacement/${cle}${garde(cle)}`, "aria-current": cle === actif ? "page" : null, title: pl(ix.get(cle).length, "recette") },
       icone(ic, "sm"), h("span", {}, nom)))) : null;
   }
   // Une ligne : la recette, ce qu'elle donne (stats ou effet), qui sait la faire
@@ -693,14 +721,15 @@
   }
   function resEmplacement(id) {
     const r = D.recettes[id], qui = IX.quiSait.get(id) || [], cat = IX.categorie.get(id);
-    const sous = [nomMetier(r.m), cat && r.k !== "spell" ? cat.nom : null, r.req ? `niveau ${r.req}` : null].filter(Boolean).join(" · ");
+    const ty = nomType(id);
+    const sous = [ty, nomMetier(r.m), cat && r.k !== "spell" && !ty ? cat.nom : null, r.req ? `niveau ${r.req}` : null].filter(Boolean).join(" · ");
     const effet = statsCourtes(r);
     return lienRecette(id, [icone(r.i, "sm", r.k === "spell" ? null : r.q),
       h("span", { class: "gd-res-txt" }, h("span", { class: "gd-res-ligne" }, h("span", { class: `gd-res-nom q-${couleurNom(r)}` }, r.n), pastille(id)),
         effet ? h("span", { class: "gd-res-effet" }, effet) : null, h("span", { class: "gd-res-sous" }, sous)),
       h("span", { class: "gd-res-qui" }, nomsQui(qui))], "gd-res");
   }
-  function pageEmplacement(cle) {
+  function pageEmplacement(cle, type) {
     const ix = indexEmplacements();
     const def = EMPLACEMENTS_GUILDE.find(([c]) => c === cle) || EMPLACEMENTS_GUILDE.find(([c]) => ix.has(c));
     const titre = "Par emplacement";
@@ -711,17 +740,29 @@
       return;
     }
     const ids = ix.get(def[0]);
-    const pose = ids.filter((id) => POSE.test(plat((IX.categorie.get(id) || {}).nom)));
-    const pieces = ids.filter((id) => !pose.includes(id));
     const parNiveau = (a, b) => (D.recettes[b].req || 0) - (D.recettes[a].req || 0) || (D.recettes[b].ilvl || 0) - (D.recettes[a].ilvl || 0) || (D.recettes[b].s || 0) - (D.recettes[a].s || 0)
       || D.recettes[a].n.localeCompare(D.recettes[b].n, "fr");
-    vue.append(filMetiers(h("a", { href: "#/metiers/emplacement" }, titre), h("span", {}, def[1])),
+    const pose = ids.filter((id) => POSE.test(plat((IX.categorie.get(id) || {}).nom))).sort(parNiveau);
+    const tous = ids.filter((id) => !pose.includes(id)).sort(parNiveau);
+    // Le type (tissu, cuir… ; épée, baguette… ; libram…) : un choix seulement quand l'emplacement en a au moins deux
+    const deType = (k) => tous.filter((id) => typePiece(id) === k);
+    const types = TYPES_PIECE.map(([k]) => k).filter((k) => deType(k).length);
+    const choix = types.length > 1 && types.includes(type) ? type : null;
+    const pieces = choix ? deType(choix) : tous;
+    if (choix) setTitre(`${def[1]} · ${TYPE_PIECE.get(choix).p} · ${titre}`);
+    const lienType = (k, nom, ic, n) => h("a", { class: `gd-empl-lien${k === choix ? " actif" : ""}`, href: `#/metiers/emplacement/${def[0]}${k ? `/${k}` : ""}`,
+      "aria-current": k === choix ? "page" : null }, icone(ic, "sm"), h("span", {}, nom), h("span", { class: "gd-empl-n" }, n));
+    const rangeeTypes = types.length > 1 ? h("nav", { class: "gd-empl gd-types", "aria-label": "Par type" }, lienType(null, "Tout", def[2], tous.length),
+      types.map((k) => { const L = deType(k); return lienType(k, TYPE_PIECE.get(k).p, D.recettes[L[0]].i, L.length); })) : null;
+    const blocPieces = pieces.length ? cadre(`${choix ? TYPE_PIECE.get(choix).p : "Les pièces"} (${pieces.length})`, h("div", { class: "gd-res-liste" }, pieces.map(resEmplacement))) : null;
+    const blocPose = pose.length ? cadre(`À poser dessus (${pose.length})`, h("div", { class: "gd-res-liste" }, pose.map(resEmplacement))) : null;
+    vue.append(filMetiers(h("a", { href: "#/metiers/emplacement" }, titre), choix ? h("a", { href: `#/metiers/emplacement/${def[0]}` }, def[1]) : h("span", {}, def[1]),
+      choix ? h("span", {}, TYPE_PIECE.get(choix).p) : null),
       h("section", { class: "frame gd-entete" }, h("div", { class: "gd-tete-metier" }, icone(def[2], "xl"),
-        h("div", {}, h("h1", {}, def[1]), h("p", {}, [pieces.length ? pl(pieces.length, "pièce") : null, pose.length ? pl(pose.length, "amélioration") : null].filter(Boolean).join(" · ")
-          + " que la guilde sait faire"))), rangeeEmplacements(def[0])),
-      h("div", { class: "stack" },
-        pose.length ? cadre(`À poser dessus (${pose.length})`, h("div", { class: "gd-res-liste" }, pose.sort(parNiveau).map(resEmplacement))) : null,
-        pieces.length ? cadre(`Les pièces (${pieces.length})`, h("div", { class: "gd-res-liste" }, pieces.sort(parNiveau).map(resEmplacement))) : null));
+        h("div", {}, h("h1", {}, choix ? `${def[1]} · ${TYPE_PIECE.get(choix).p}` : def[1]),
+          h("p", {}, [pieces.length ? pl(pieces.length, "pièce") : null, pose.length ? pl(pose.length, "amélioration") : null].filter(Boolean).join(" · ")))),
+        rangeeEmplacements(def[0], choix || (TYPE_PIECE.has(type) ? type : null)), rangeeTypes),
+      h("div", { class: "stack" }, ...(choix ? [blocPieces, blocPose] : [blocPose, blocPieces])));
   }
 
   // Les recettes à recharge de la guilde (étoffe lunaire, transmutations…) : qui peut les lancer aujourd'hui, les prêtes d'abord
@@ -1363,7 +1404,7 @@
     },
     metiers: {
       titre: "Métiers", href: "#/metiers",
-      routes: { metiers: (p, q) => (p[0] === "envoyer" ? pageEnvoyer() : p[0] === "emplacement" ? (D ? pageEmplacement(p[1]) : pageMetiers(""))
+      routes: { metiers: (p, q) => (p[0] === "envoyer" ? pageEnvoyer() : p[0] === "emplacement" ? (D ? pageEmplacement(p[1], p[2]) : pageMetiers(""))
         : pageMetiers(q.get("q") || "", q.get("voir") === "nouveautes")), metier: (p) => (D ? pageMetier(p[0]) : pageMetiers("")), recette: (p) => (D ? pageRecette(p[0]) : pageMetiers("")) },
       compte: () => (D && IX.recherche.recettes.length ? pl(IX.recherche.recettes.length, "recette") : null),
       sous: (page, p) => (page === "metier" ? p[0] : page === "metiers" && p[0] === "envoyer" ? "envoyer" : null),
