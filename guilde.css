@@ -1114,12 +1114,6 @@ kbd {
 .gd-rch { display: grid; gap: 2px; }
 .gd-rch-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; min-height: 54px; padding: 8px 12px; border-radius: 12px; transition: background-color .2s; }
 .gd-rch-ligne:hover { background: var(--survol); }
-/* 1013 : le tier fabriqué du premier raid */
-.gd-tier { display: grid; gap: 14px; }
-.gd-tier-onglets { justify-self: start; }
-.gd-tier-pieces { display: flex; gap: 4px; }
-.gd-tier-piece { line-height: 0; }
-.gd-tier-nom { display: grid; min-width: 220px; line-height: 1.35; font-weight: 600; }
 .gd-rch-recette { flex: 1 1 240px; min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: center; color: var(--texte); line-height: 1.35; }
 .gd-rch-recette .icon { grid-row: span 2; }
 .gd-rch-recette:hover { text-decoration: none; }
