@@ -1137,6 +1137,11 @@ a.gd-recharge:hover { text-decoration: none; filter: brightness(1.18); }
 .gd-empl-lien .icon { border-radius: 50%; }
 .gd-empl-lien:hover { text-decoration: none; color: var(--texte); border-color: rgba(79, 217, 207, .4); background: var(--turquoise-voile); }
 .gd-empl-lien.actif { color: var(--turquoise-vif); border-color: rgba(79, 217, 207, .55); background: var(--turquoise-voile); }
+/* Le type d'une pièce (tissu, cuir… ; épée, baguette… ; libram…), sous les emplacements */
+.gd-entete > .gd-types { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ligne); }
+.gd-empl-n { min-width: 20px; margin-right: -4px; padding: 0 6px; font-size: .74rem; font-weight: 600; line-height: 18px; text-align: center; color: var(--texte-3);
+  background: rgba(255, 255, 255, .06); border-radius: 999px; }
+.gd-empl-lien.actif .gd-empl-n { color: var(--turquoise-vif); background: rgba(79, 217, 207, .14); }
 .gd-res-liste { display: grid; gap: 2px; }
 .gd-res-effet { font-size: .86rem; color: var(--q-uncommon); opacity: .9; }
 .gd-spe {
