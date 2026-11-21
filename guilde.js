@@ -626,7 +626,6 @@
     if (q0) dessinerResultats(resultats, q0);
     if (SURVOL) setTimeout(() => { try { champ.focus({ preventScroll: true }); } catch (e) { champ.focus(); } }, 0);
     return h("section", { class: "frame titre gd-recherche" }, h("h2", { class: "frame-title" }, "Qui sait faire… ?"),
-      h("p", { class: "muted small", style: { margin: "0 0 8px" } },"Le nom d'une recette, d'un composant ou d'un membre, sans te soucier des accents."),
       champ, D ? h("div", { class: "gd-empl-tete" }, h("span", { class: "gd-empl-titre" }, "Ou par emplacement"), rangeeEmplacements(null)) : null, resultats);
   }
   // L'encart de l'addon des métiers : son nom, sa version, le lien vers sa page
@@ -951,7 +950,7 @@
     chargerEquipement().then((E) => {
       const e = E && E.persos && E.persos[adresseDe(p)];
       if (!e || !Array.isArray(e.pieces) || !e.pieces.length) {
-        fill(corps, h("p", { class: "gd-eq-tete" }, "Pas encore relu : le site lit l'équipement des membres sur l'armurerie officielle, quelques-uns à chaque heure."));
+        fill(corps, h("p", { class: "gd-eq-tete" }, "Pas encore relu."));
         return;
       }
       const par = new Map(e.pieces.map((x) => [x.s, x]));
@@ -1187,8 +1186,7 @@
           A.installer ? h("li", {}, "Clique sur le bouton : ton navigateur propose d'ouvrir l'appli CurseForge, qui installe l'addon dans WoW Forever.")
             : h("li", {}, "Ouvre la page de l'addon sur CurseForge et clique sur ", h("b", {}, "Installer"), " : l'appli CurseForge l'ajoute à ton jeu (WoW Forever)."),
           h("li", {}, "Les mises à jour arrivent ensuite d'elles-mêmes dans l'appli, comme pour tes autres addons.")),
-        h("p", { class: "gd-texte muted" }, A.installer ? ["Pas encore l'appli ? La page qui s'ouvre propose de la télécharger. Ou passe par ", h("a", { href: A.curseforge, target: "_blank", rel: "noopener" }, "la page de l'addon"), " pour télécharger le zip. "] : null,
-          "La page n'apparaît pas dans la recherche de CurseForge : seuls ceux qui ont ce lien la trouvent.", texte ? ` ${texte}` : null)));
+        h("p", { class: "gd-texte muted" }, A.installer ? ["Pas encore l'appli ? La page qui s'ouvre propose de la télécharger. Ou passe par ", h("a", { href: A.curseforge, target: "_blank", rel: "noopener" }, "la page de l'addon"), " pour télécharger le zip."] : null, texte ? ` ${texte}` : null)));
     }
     return cadre("Télécharger", h("div", { class: "gd-telecharger" },
       A.fichier ? h("a", { class: "btn gd-gros-bouton", href: A.fichier, download: "" }, icone(A.icone, "md"), "Télécharger l'addon")
@@ -1349,8 +1347,7 @@
           etape("3", h("p", {}, "Colle-le ici, puis envoie."))),
         champ, apercu, h("div", { class: "gd-code-actions" }, bouton), retour),
       cadre("Ce qui part",
-        h("p", { class: "gd-pourquoi" }, "Exactement ce que l'addon partage déjà avec la guilde : ton nom, ta classe, tes métiers et ta spécialisation, tes recettes et tes recharges. Rien d'autre."),
-        h("p", { class: "muted small" }, "Le code porte aussi une petite clé tirée au hasard par ton addon et gardée seulement chez toi : elle prouve au site que c'est bien toi. Ton perso doit être dans la liste de la guilde (rubrique Membres). Addon en pause, le code efface ta fiche."))));
+        h("p", { class: "gd-pourquoi" }, "Exactement ce que l'addon partage déjà avec la guilde : ton nom, ta classe, tes métiers et ta spécialisation, tes recettes et tes recharges. Rien d'autre."))));
     if (SURVOL) setTimeout(() => { try { champ.focus({ preventScroll: true }); } catch (e) { champ.focus(); } }, 0);
   }
 
