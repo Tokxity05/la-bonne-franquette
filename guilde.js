@@ -983,11 +983,40 @@
   const EQ_NOMS = { HEAD: "Tête", NECK: "Cou", SHOULDER: "Épaules", BACK: "Dos", CHEST: "Torse", SHIRT: "Chemise", TABARD: "Tabard", WRIST: "Poignets",
     HANDS: "Mains", WAIST: "Taille", LEGS: "Jambes", FEET: "Pieds", FINGER_1: "Doigt", FINGER_2: "Doigt", TRINKET_1: "Bijou", TRINKET_2: "Bijou",
     MAIN_HAND: "Main droite", OFF_HAND: "Main gauche", RANGED: "À distance" };
-  let EQUIPEMENT = null;
+  let EQUIPEMENT = null, BIS = null;
   const chargerEquipement = () => (EQUIPEMENT = EQUIPEMENT || lire("data/equipement.json").catch(() => null));
+  const chargerBis = () => (BIS = BIS || lire("data/bis.json").catch(() => null));
+  // 1012 : la pièce face à la liste BiS de la spé (data/bis.json) ; bagues et bijoux se jugent ensemble
+  const GROUPE_BIS = { FINGER_1: "FINGER", FINGER_2: "FINGER", TRINKET_1: "TRINKET", TRINKET_2: "TRINKET" };
+  const ENCH_PLACE = { HEAD: "head", NECK: "neck", SHOULDER: "shoulder", BACK: "back", CHEST: "chest", WRIST: "wrist", HANDS: "hands", LEGS: "legs",
+    FEET: "feet", RANGED: "ranged" };
+  function placesEnchant(slot, x) {
+    if (slot === "MAIN_HAND") return ["mainhand", "twohand"];
+    if (slot === "OFF_HAND") return /bouclier/i.test(x.t || "") ? ["bouclier"] : /tenu/i.test(x.t || "") ? ["tenu"] : ["offhand"];
+    return ENCH_PLACE[slot] ? [ENCH_PLACE[slot]] : [];
+  }
+  function jugerPiece(x, slot, spe) {
+    if (!x || !spe) return null;
+    const g = GROUPE_BIS[slot] || slot;
+    const pre = spe.pre && spe.pre[g] ? spe.pre[g][String(x.id)] : null;
+    const raid = spe.raid && spe.raid[g] ? spe.raid[g][String(x.id)] : null;
+    const sans = !(x.e && x.e.length) && placesEnchant(slot, x).some((k) => (spe.ench || []).includes(k));
+    const premiers = (spe.pre1 && spe.pre1[g]) || [];
+    return { pre, raid, sans, premiers, liste: !!(spe.pre && spe.pre[g]) };
+  }
+  function etiquettesPiece(j) {
+    if (!j) return null;
+    const L = [];
+    if (j.raid === 1) L.push(h("span", { class: "gd-eq-tag bis" }, "BiS raid"));
+    else if (j.pre === 1) L.push(h("span", { class: "gd-eq-tag bis" }, "BiS"));
+    else if (j.pre) L.push(h("span", { class: "gd-eq-tag rang", title: j.premiers.length ? `1er choix : ${j.premiers.join(" · ")}` : null }, `n° ${j.pre}`));
+    else if (j.raid) L.push(h("span", { class: "gd-eq-tag rang" }, `raid n° ${j.raid}`));
+    if (j.sans) L.push(h("span", { class: "gd-eq-tag sans" }, "sans enchantement"));
+    return L.length ? h("span", { class: "gd-eq-tags" }, L) : null;
+  }
   // La clé d'un perso dans equipement.json : son adresse sur l'armurerie (« levieuxpala-titøu »)
   const adresseDe = (p) => p.adresse || (p.armurerie ? decodeURIComponent(String(p.armurerie).split("/").pop() || "") : null);
-  function caseEquipement(x, slot, region) {
+  function caseEquipement(x, slot, region, spe) {
     if (!x) return h("div", { class: "gd-eq vide" }, h("span", { class: "gd-eq-ic gd-eq-trou", "aria-hidden": "true" }), h("span", { class: "gd-eq-sous" }, EQ_NOMS[slot] || slot));
     const q = qualite(x.q);
     const ic = x.i ? h("img", { class: `icon md qb-${q}`, src: `https://render.worldofwarcraft.com/forever-${region || "eu"}/icons/56/${encodeURIComponent(x.i)}.jpg`, alt: "",
@@ -997,25 +1026,35 @@
       h("div", { class: "gd-eq-txt" },
         lienWh("item", x.id, x.n || `Objet ${x.id}`, `gd-eq-nom q-${q}`),
         h("span", { class: "gd-eq-sous" }, [x.l ? `Niv. ${x.l}` : null, x.t || EQ_NOMS[slot]].filter(Boolean).join(" · ")),
-        (x.e || []).map((e) => h("span", { class: "gd-eq-ench" }, e))));
+        (x.e || []).map((e) => h("span", { class: "gd-eq-ench" }, e)),
+        etiquettesPiece(jugerPiece(x, slot, spe))));
   }
   function blocEquipement(p) {
     const corps = h("div", { class: "gd-eq-corps" }, h("p", { class: "gd-eq-tete" }, "Lecture de l'équipement…"));
     const bloc = cadre("Équipement", corps);
     bloc.classList.add("gd-equipement");
-    chargerEquipement().then((E) => {
+    Promise.all([chargerEquipement(), chargerBis()]).then(([E, B]) => {
       const e = E && E.persos && E.persos[adresseDe(p)];
       if (!e || !Array.isArray(e.pieces) || !e.pieces.length) {
         fill(corps, h("p", { class: "gd-eq-tete" }, "Pas encore relu."));
         return;
       }
       const par = new Map(e.pieces.map((x) => [x.s, x]));
-      const col = (L) => h("div", { class: "gd-eq-col" }, L.map((s) => caseEquipement(par.get(s), s, E.region)));
+      // la liste BiS de sa spé (l'arbre qui a le plus de points, relevé par le robot)
+      const spid = B && e.spe && B.armurerie && B.armurerie[p.classe] ? B.armurerie[p.classe][e.spe] : null;
+      const spe = spid && B.specs ? B.specs[spid] : null;
+      const col = (L) => h("div", { class: "gd-eq-col" }, L.map((s) => caseEquipement(par.get(s), s, E.region, spe)));
       const lu = e.lu ? quand(new Date(e.lu * 1000).toISOString()) : null;
+      let bilan = null;
+      if (spe) {
+        const juges = e.pieces.map((x) => jugerPiece(x, x.s, spe)).filter((j) => j && j.liste);
+        const nBis = juges.filter((j) => j.pre === 1 || j.raid === 1).length, nSans = juges.filter((j) => j.sans).length;
+        bilan = [" · ", h("b", {}, spe.nom), ` : ${nBis} pièce${nBis > 1 ? "s" : ""} BiS`, nSans ? `, ${nSans} sans enchantement` : null];
+      }
       fill(corps,
-        h("p", { class: "gd-eq-tete" }, e.ilvl != null ? ["Niveau d'objet moyen ", h("b", {}, String(e.ilvl))] : null, lu ? ` · relu sur l'armurerie ${lu}` : null),
+        h("p", { class: "gd-eq-tete" }, e.ilvl != null ? ["Niveau d'objet moyen ", h("b", {}, String(e.ilvl))] : null, bilan, lu ? ` · relu ${lu}` : null),
         h("div", { class: "gd-eq-grille" }, col(EQ_GAUCHE), col(EQ_DROITE)),
-        h("div", { class: "gd-eq-armes" }, EQ_ARMES.map((s) => caseEquipement(par.get(s), s, E.region))));
+        h("div", { class: "gd-eq-armes" }, EQ_ARMES.map((s) => caseEquipement(par.get(s), s, E.region, spe))));
       infobulles();
     });
     return bloc;
