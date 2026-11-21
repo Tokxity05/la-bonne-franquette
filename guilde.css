@@ -1,0 +1,1152 @@
+/* ==========================================================================
+   LBF — le site de la guilde La Bonne Franquette (World of Warcraft: Forever) : accueil, Membres, Métiers, Addons
+   (« Métiers LBF » n'est plus que le nom de l'addon des métiers).
+   Direction artistique « nuit arcanique » (18/11), tirée du logo de WoW Forever : un bleu nuit profond,
+   une aurore et un champ d'étoiles en CSS pur, des cartes en verre dépoli, un accent turquoise (le cristal
+   du logo) et un or clair pour les touches précieuses. Volontairement loin du Grimoire : ni pierre, ni cuir,
+   ni rivets, ni fenêtre de l'interface du jeu.
+   Titres : Cormorant Garamond ; texte : Inter. Peu d'animations, lentes et douces, toutes coupées par
+   prefers-reduced-motion. Gardés tels quels parce qu'ils ont un sens en jeu : les couleurs de classe (--c-*),
+   de qualité des objets (--q-*) et de difficulté des recettes (orange, jaune, vert, gris).
+   Préfixes : gd- pour le site, lv- pour le livre de métier d'un membre (liste à gauche, détail à droite).
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* La nuit */
+  --nuit-950: #04070e;
+  --nuit-900: #070b18;
+  --nuit-850: #0a1122;
+  --nuit-800: #0e172b;
+  --nuit-700: #152138;
+  --nuit-600: #24324f;
+
+  /* Le verre : surfaces translucides (repli opaque plus bas, @supports) */
+  --verre: linear-gradient(180deg, rgba(22, 33, 60, .66), rgba(12, 19, 37, .62));
+  --verre-opaque: linear-gradient(180deg, #131d35, #0d1528);
+  --verre-flou: blur(16px) saturate(140%);
+  --ligne: rgba(150, 180, 235, .11);
+  --ligne-forte: rgba(150, 180, 235, .2);
+  --survol: rgba(160, 200, 255, .06);
+
+  /* L'encre */
+  --texte: #e8edf6;
+  --texte-2: #a9b5cb;
+  --texte-3: #7f8da6;
+  --ivoire: #f4ecd9;
+
+  /* Le cristal et l'or */
+  --turquoise: #4fd9cf;
+  --turquoise-vif: #8af1e8;
+  --turquoise-sombre: #127a80;
+  --turquoise-voile: rgba(79, 217, 207, .12);
+  --or: #e9c77e;
+  --or-pale: #f6e5bb;
+
+  /* États */
+  --ok: #6ee7a8;
+  --attente: #ffb86b;
+  --non: #ff7d6e;
+
+  /* Qualité des objets (couleurs du jeu) */
+  --q-poor: #9d9d9d;
+  --q-common: #ffffff;
+  --q-uncommon: #1eff00;
+  --q-rare: #0070dd;
+  --q-epic: #a335ee;
+  --q-legendary: #ff8000;
+  --q-artifact: #e6cc80;
+
+  /* Couleurs de classe (Vanilla) */
+  --c-druid: #ff7d0a;
+  --c-hunter: #abd473;
+  --c-mage: #69ccf0;
+  --c-paladin: #f58cba;
+  --c-priest: #ffffff;
+  --c-rogue: #fff569;
+  --c-shaman: #0070de;
+  --c-warlock: #9482c9;
+  --c-warrior: #c79c6e;
+
+  /* Difficulté d'une recette, comme dans la fenêtre de métier du jeu */
+  --d-orange: #ff8040;
+  --d-jaune: #ffff00;
+  --d-vert: #40c040;
+  --d-gris: #808080;
+
+  --font-title: "Cormorant Garamond", "Cormorant", Garamond, Georgia, serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, Consolas, "Cascadia Mono", Menlo, monospace;
+
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 20px;
+  --ombre: inset 0 1px 0 rgba(255, 255, 255, .045), 0 24px 48px -28px rgba(0, 0, 0, .9), 0 2px 6px rgba(0, 0, 0, .22);
+  --doux: cubic-bezier(.22, .61, .36, 1);
+  --maxw: 1160px;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scrollbar-color: rgba(150, 180, 235, .22) transparent; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--texte);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--nuit-900);
+  overflow-x: hidden;
+}
+/* Le ciel : l'aurore (::before) et le champ d'étoiles (::after), immobiles, pour que le verre des cartes n'ait rien à recalculer */
+body::before, body::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+body::before {
+  background:
+    radial-gradient(70% 50% at 12% -8%, rgba(45, 212, 191, .17), transparent 70%),
+    radial-gradient(60% 45% at 88% -4%, rgba(99, 102, 241, .16), transparent 70%),
+    radial-gradient(45% 32% at 56% 16%, rgba(56, 189, 248, .06), transparent 70%),
+    radial-gradient(90% 55% at 50% 112%, rgba(30, 58, 138, .3), transparent 72%),
+    linear-gradient(180deg, #0a1226 0%, #070b18 48%, #05080f 100%);
+}
+/* Six semis de points, de pas premiers entre eux pour ne pas dessiner de grille, fondus vers le bas */
+body::after {
+  opacity: .75;
+  background-image:
+    radial-gradient(circle at 13% 21%, rgba(255, 255, 255, .85) 0 .7px, transparent 1.3px),
+    radial-gradient(circle at 71% 57%, rgba(200, 228, 255, .75) 0 .6px, transparent 1.2px),
+    radial-gradient(circle at 37% 83%, rgba(255, 255, 255, .6) 0 .8px, transparent 1.4px),
+    radial-gradient(circle at 86% 14%, rgba(180, 246, 238, .65) 0 .7px, transparent 1.3px),
+    radial-gradient(circle at 52% 36%, rgba(255, 255, 255, .45) 0 .5px, transparent 1.1px),
+    radial-gradient(circle at 24% 62%, rgba(255, 246, 220, .95) 0 1px, rgba(255, 246, 220, .14) 1.8px, transparent 3.2px);
+  background-size: 211px 223px, 293px 271px, 349px 331px, 419px 397px, 157px 167px, 613px 587px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .55) 50%, transparent 92%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .55) 50%, transparent 92%);
+}
+
+a { color: var(--turquoise); text-decoration: none; transition: color .2s; }
+a:hover { color: var(--turquoise-vif); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--turquoise-vif); outline-offset: 2px; }
+::selection { background: rgba(79, 217, 207, .3); color: #fff; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(150, 180, 235, .2); border: 2px solid transparent; background-clip: padding-box; border-radius: 999px; }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-variant-numeric: lining-nums;
+  color: var(--ivoire);
+  letter-spacing: .005em;
+  line-height: 1.15;
+  margin: 0 0 .5em;
+}
+h1 { font-size: 2.4rem; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.25rem; }
+p { margin: 0 0 .8em; }
+code {
+  font-family: var(--font-mono);
+  font-size: .85em;
+  padding: 2px 7px;
+  color: #c6f7f1;
+  background: rgba(79, 217, 207, .08);
+  border: 1px solid rgba(79, 217, 207, .2);
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.muted { color: var(--texte-2); }
+.small { font-size: .875rem; }
+.center { text-align: center; }
+
+/* Lien d'évitement (clavier) */
+.gd-saut { position: absolute; left: 12px; top: -60px; z-index: 100; padding: 8px 14px; color: var(--texte); background: var(--nuit-800); border: 1px solid var(--ligne-forte); border-radius: var(--r-sm); }
+.gd-saut:focus { top: 12px; }
+
+/* --------------------------------------------------------------------------
+   La barre du menu : collante, floutée, des boutons en pastilles
+   -------------------------------------------------------------------------- */
+.gd-menu { position: sticky; top: 0; z-index: 50; }
+/* Le verre de la barre est sur ::before : la barre elle-même n'arrête pas le flou du panneau des métiers, qui voit ainsi la page */
+.gd-menu::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: rgba(7, 11, 24, .72);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+.gd-menu::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(79, 217, 207, .38) 25%, rgba(233, 199, 126, .32) 75%, transparent);
+}
+.gd-menu-in { max-width: var(--maxw); margin: 0 auto; padding: 10px 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; }
+.gd-marque { display: flex; align-items: center; gap: 11px; color: var(--texte); text-decoration: none !important; }
+.gd-marque-logo {
+  flex: none; width: 42px; height: auto;
+  filter: drop-shadow(0 0 7px rgba(79, 217, 207, .38)) drop-shadow(0 2px 3px rgba(0, 0, 0, .6));
+  transition: filter .5s var(--doux), transform .5s var(--doux);
+}
+.gd-marque:hover .gd-marque-logo { transform: scale(1.06); filter: drop-shadow(0 0 12px rgba(79, 217, 207, .65)) drop-shadow(0 2px 3px rgba(0, 0, 0, .6)); }
+.gd-marque-txt { display: flex; flex-direction: column; line-height: 1.05; }
+.gd-marque-nom { font-family: var(--font-title); font-weight: 700; font-size: 1.45rem; letter-spacing: .01em; color: var(--ivoire); }
+.gd-marque-sous { margin-top: 3px; font-size: .64rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--texte-3); transition: color .25s; }
+.gd-marque:hover .gd-marque-sous { color: var(--turquoise); }
+.gd-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+/* « Envoyer mes métiers », à part dans la barre du haut (20/11) */
+.gd-envoyer-btn { display: inline-flex; align-items: center; gap: 7px; margin-left: 8px; padding: 6px 13px; border: 1px solid rgba(79, 217, 207, .45); border-radius: 999px;
+  font-size: .88rem; font-weight: 600; white-space: nowrap; text-decoration: none; color: var(--turquoise-vif); background: var(--turquoise-voile); transition: background-color .2s, border-color .2s; }
+.gd-envoyer-btn:hover, .gd-envoyer-btn.actif { background: rgba(79, 217, 207, .2); border-color: var(--turquoise); }
+.gd-envoyer-btn .icon { border-radius: 4px; }
+.gd-lien {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: .92rem;
+  font-weight: 500;
+  color: var(--texte-2);
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: color .2s, background-color .2s, border-color .2s, box-shadow .3s;
+}
+.gd-lien:hover { color: var(--texte); background: var(--survol); text-decoration: none; }
+.gd-lien.actif, .gd-deroule.actif {
+  color: var(--turquoise-vif);
+  background: var(--turquoise-voile);
+  border-color: rgba(79, 217, 207, .3);
+  box-shadow: 0 0 18px -6px rgba(79, 217, 207, .5);
+}
+/* Une rubrique à liens directs (Métiers, Addons) : une seule pastille, son nom mène à sa page, la flèche déroule le panneau
+   (à la souris, le survol aussi ; un pont invisible sous la pastille laisse passer la souris jusqu'au panneau) */
+.gd-deroule {
+  position: relative; display: inline-flex; align-items: center;
+  border: 1px solid transparent; border-radius: 999px;
+  transition: color .2s, background-color .2s, border-color .2s, box-shadow .3s;
+}
+.gd-deroule > .gd-lien { min-height: 36px; padding-right: 3px; border: 0; }
+.gd-deroule > .gd-lien:hover { background: none; }
+.gd-deroule:hover, .gd-deroule.ouvert { background: var(--survol); }
+.gd-deroule:hover > .gd-lien { color: var(--texte); }
+.gd-deroule.actif { background: var(--turquoise-voile); }
+.gd-deroule.actif > .gd-lien, .gd-deroule.actif > .gd-ouvrir { color: var(--turquoise-vif); }
+.gd-ouvrir {
+  display: inline-grid; place-items: center; width: 32px; height: 36px; margin: 0; padding: 0 6px 0 0;
+  color: var(--texte-2); cursor: pointer; background: none; border: 0; border-radius: 0 999px 999px 0; transition: color .2s;
+}
+.gd-ouvrir:hover { color: var(--turquoise-vif); }
+.gd-fleche { display: inline-block; font-size: .95rem; line-height: 1; opacity: .7; transition: transform .3s var(--doux); }
+.gd-deroule.ouvert .gd-fleche { transform: rotate(180deg); }
+.gd-panneau {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 60;
+  width: max-content; min-width: 270px; max-width: calc(100vw - 32px);
+  display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 4px; padding: 8px;
+  background: rgba(12, 19, 37, .8);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--ligne-forte);
+  border-radius: var(--r);
+  box-shadow: 0 26px 50px -14px rgba(0, 0, 0, .8);
+  animation: gd-apparait .25s var(--doux);
+}
+@keyframes gd-apparait { from { opacity: 0; transform: translateY(-4px); } }
+.gd-panneau-lien { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 6px 10px 6px 8px; color: var(--texte); border-radius: var(--r-sm); white-space: nowrap; transition: background-color .2s, color .2s; }
+.gd-panneau-lien .icon { border-radius: 7px; }
+.gd-panneau-lien:hover, .gd-panneau-lien.actif { color: var(--turquoise-vif); background: var(--turquoise-voile); text-decoration: none; }
+.gd-panneau-lien .gd-compte, .gd-panneau-note { margin-left: auto; }
+.gd-panneau-note { padding-left: 14px; font-size: .74rem; color: var(--texte-3); font-variant-numeric: tabular-nums; }
+.gd-panneau.une-colonne { grid-template-columns: minmax(0, 1fr); }
+.gd-panneau::before { content: ""; position: absolute; left: 0; right: 0; top: -12px; height: 12px; }
+.gd-deroule.ouvert > .gd-panneau { display: grid; }
+@media (hover: hover) and (pointer: fine) {
+  .gd-deroule:hover > .gd-panneau { display: grid; }
+}
+
+/* --------------------------------------------------------------------------
+   Mise en page
+   -------------------------------------------------------------------------- */
+.gd-vue { flex: 1; width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 32px 20px 72px; outline: none; }
+.stack > * + * { margin-top: 22px; }
+.gd-chargement { padding: 80px 0; text-align: center; color: var(--texte-2); font-family: var(--font-title); font-size: 1.3rem; }
+
+.gd-pied { position: relative; text-align: center; padding: 30px 20px 44px; color: var(--texte-3); font-size: .82rem; }
+.gd-pied::before { content: ""; position: absolute; top: 0; left: 50%; width: min(760px, calc(100% - 40px)); height: 1px; transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, var(--ligne-forte), transparent); }
+.gd-pied p { max-width: 760px; margin: 0 auto; }
+.gd-pied .gd-pied-transp { margin-bottom: 6px; color: var(--texte-2); }
+.gd-pied .gd-pied-copy { margin-top: 12px; font-family: var(--font-title); font-size: 1.05rem; font-weight: 600; font-variant-numeric: lining-nums; letter-spacing: .03em; color: var(--or); }
+
+/* Le fil d'Ariane */
+.gd-fil { margin: 0 0 18px; font-size: .86rem; color: var(--texte-3); }
+.gd-fil a { color: var(--texte-2); }
+.gd-fil a:hover { color: var(--turquoise-vif); }
+.gd-fil > span:last-child { color: var(--texte); }
+
+/* --------------------------------------------------------------------------
+   Les cartes : du verre dépoli, un filet clair, un liseré lumineux au survol
+   -------------------------------------------------------------------------- */
+.frame {
+  position: relative;
+  padding: 24px 26px 22px;
+  background: var(--verre);
+  border: 1px solid var(--ligne);
+  border-radius: var(--r-lg);
+  box-shadow: var(--ombre);
+  -webkit-backdrop-filter: var(--verre-flou);
+  backdrop-filter: var(--verre-flou);
+}
+/* Le liseré : un filet en dégradé turquoise vers or, posé sur le bord par un masque, qui s'allume au survol */
+.frame::before, .lv-fenetre::before, .gd-tuile::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(140deg, rgba(138, 241, 232, .75), rgba(79, 217, 207, .12) 30%, rgba(233, 199, 126, 0) 58%, rgba(233, 199, 126, .6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity .6s var(--doux);
+}
+.frame::before, .lv-fenetre::before { opacity: .3; }
+.frame:hover::before, .lv-fenetre:hover::before { opacity: .85; }
+/* Le titre d'une carte : une puce en losange, le titre, un filet qui s'efface */
+.frame-title { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; font-size: 1.5rem; font-weight: 600; color: var(--ivoire); }
+.frame-title::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 1px; transform: rotate(45deg);
+  background: linear-gradient(135deg, var(--turquoise-vif), var(--or)); box-shadow: 0 0 10px rgba(79, 217, 207, .6); }
+.frame-title::after { content: ""; flex: 1 1 24px; min-width: 24px; height: 1px; background: linear-gradient(90deg, var(--ligne-forte), transparent); }
+/* L'en-tête d'une page (un membre, un métier) : un peu d'aurore dans le verre */
+.gd-entete { background: radial-gradient(60% 140% at 0% 0%, rgba(79, 217, 207, .11), transparent 62%), var(--verre); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .frame, .lv-fenetre { background: var(--verre-opaque); }
+  .gd-entete { background: radial-gradient(60% 140% at 0% 0%, rgba(79, 217, 207, .11), transparent 62%), var(--verre-opaque); }
+  .gd-menu::before { background: rgba(7, 11, 24, .97); }
+  .gd-panneau { background: #0d1528; }
+}
+
+/* --------------------------------------------------------------------------
+   Icônes, qualité, classes, difficulté
+   -------------------------------------------------------------------------- */
+.icon {
+  display: inline-block;
+  flex: none;
+  width: 40px; height: 40px;
+  border-radius: 9px;
+  background: #000;
+  vertical-align: middle;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 0 2px rgba(150, 180, 235, .14), 0 4px 10px -2px rgba(0, 0, 0, .6);
+}
+.icon.xs { width: 18px; height: 18px; border-radius: 5px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .7); }
+.icon.sm { width: 22px; height: 22px; border-radius: 6px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .7), 0 0 0 2px rgba(150, 180, 235, .1); }
+.icon.md { width: 32px; height: 32px; border-radius: 8px; }
+.icon.lg { width: 56px; height: 56px; border-radius: 13px; }
+.icon.xl { width: 72px; height: 72px; border-radius: 18px; }
+/* Bordure à la couleur de la qualité */
+.qb-poor { --qb: var(--q-poor); --qb-glow: transparent; }
+.qb-common { --qb: #bfbfbf; --qb-glow: transparent; }
+.qb-uncommon { --qb: var(--q-uncommon); --qb-glow: rgba(30, 255, 0, .35); }
+.qb-rare { --qb: var(--q-rare); --qb-glow: rgba(0, 112, 221, .45); }
+.qb-epic { --qb: var(--q-epic); --qb-glow: rgba(163, 53, 238, .5); }
+.qb-legendary { --qb: var(--q-legendary); --qb-glow: rgba(255, 128, 0, .6); }
+.qb-artifact { --qb: var(--q-artifact); --qb-glow: rgba(230, 204, 128, .5); }
+.icon[class*="qb-"] { box-shadow: 0 0 0 1px rgba(0, 0, 0, .7), 0 0 0 2px var(--qb), 0 0 10px var(--qb-glow); }
+.icon.sm[class*="qb-"], .icon.xs[class*="qb-"] { box-shadow: 0 0 0 1px var(--qb), 0 0 5px var(--qb-glow); }
+
+.q-poor { color: var(--q-poor); }
+.q-common { color: var(--q-common); }
+.q-uncommon { color: var(--q-uncommon); }
+.q-rare { color: var(--q-rare); }
+.q-epic { color: var(--q-epic); }
+.q-legendary { color: var(--q-legendary); }
+.q-artifact { color: var(--q-artifact); }
+a.q-common, a.q-uncommon, a.q-rare, a.q-epic, a.q-poor, a.q-legendary, a.q-artifact { text-decoration: none; }
+a.q-common:hover, a.q-uncommon:hover, a.q-rare:hover, a.q-epic:hover { text-decoration: underline; }
+
+/* a.c-… : un nom en lien garde la couleur de sa classe au survol (a:hover le passerait au turquoise) */
+.c-druid, a.c-druid { color: var(--c-druid); }
+.c-hunter, a.c-hunter { color: var(--c-hunter); }
+.c-mage, a.c-mage { color: var(--c-mage); }
+.c-paladin, a.c-paladin { color: var(--c-paladin); }
+.c-priest, a.c-priest { color: var(--c-priest); }
+.c-rogue, a.c-rogue { color: var(--c-rogue); }
+.c-shaman, a.c-shaman { color: var(--c-shaman); }
+.c-warlock, a.c-warlock { color: var(--c-warlock); }
+.c-warrior, a.c-warrior { color: var(--c-warrior); }
+.c-inconnue, a.c-inconnue { color: var(--texte); }
+
+/* Les paliers de compétence d'une recette : orange (requise), jaune, vert, gris */
+
+/* Boutons : turquoise plein, ou fantôme */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 20px;
+  font-weight: 600;
+  font-size: .92rem;
+  letter-spacing: .01em;
+  color: #04201f;
+  cursor: pointer;
+  background: linear-gradient(180deg, var(--turquoise-vif), var(--turquoise) 55%, #2fbfb8);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 0 1px rgba(138, 241, 232, .35), 0 8px 22px -8px rgba(79, 217, 207, .65);
+  transition: transform .3s var(--doux), box-shadow .3s var(--doux), filter .3s;
+}
+.btn:hover { color: #021615; text-decoration: none; transform: translateY(-1px); filter: brightness(1.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 0 0 1px rgba(138, 241, 232, .55), 0 14px 30px -8px rgba(79, 217, 207, .8); }
+.btn:active { transform: none; }
+.btn.ghost { color: var(--texte); background: rgba(255, 255, 255, .03); box-shadow: inset 0 0 0 1px var(--ligne-forte); }
+.btn.ghost:hover { color: var(--turquoise-vif); background: var(--turquoise-voile); box-shadow: inset 0 0 0 1px rgba(79, 217, 207, .45), 0 0 22px -8px rgba(79, 217, 207, .6); }
+.gd-compte {
+  display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 7px;
+  font-family: var(--font-body); font-size: .74rem; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none;
+  color: var(--texte-2); background: rgba(150, 180, 235, .08); border: 1px solid var(--ligne); border-radius: 999px;
+}
+.gd-plus {
+  display: flex; align-items: center; justify-content: center; width: 100%; min-height: 40px; margin-top: 10px; padding: 6px 12px;
+  font-size: .88rem; font-weight: 500; color: var(--turquoise); cursor: pointer;
+  background: rgba(255, 255, 255, .02); border: 1px dashed var(--ligne-forte); border-radius: 12px;
+  transition: color .2s, background-color .2s, border-color .2s;
+}
+.gd-plus:hover { color: var(--turquoise-vif); background: var(--turquoise-voile); border-color: rgba(79, 217, 207, .4); border-style: solid; }
+
+/* --------------------------------------------------------------------------
+   Accueil : le logo, le titre, la recherche
+   -------------------------------------------------------------------------- */
+.gd-hero { text-align: center; margin: 4px 0 40px; }
+.gd-hero h1 {
+  margin: 6px 0 0;
+  font-size: clamp(2.6rem, 6.2vw, 3.8rem);
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: .01em;
+  color: transparent;
+  background: linear-gradient(180deg, #fffaf0 0%, #f4e2b6 50%, #cfa760 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 2px 14px rgba(0, 0, 0, .5)) drop-shadow(0 0 26px rgba(79, 217, 207, .14));
+}
+.gd-hero-guilde { margin: 10px 0 0; padding-left: .34em; font-size: .78rem; font-weight: 600; letter-spacing: .34em; text-transform: uppercase; color: var(--turquoise); }
+.gd-separateur { position: relative; width: min(320px, 70%); height: 9px; margin: 20px auto 0; }
+.gd-separateur::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(79, 217, 207, .55) 30%, rgba(233, 199, 126, .75) 50%, rgba(79, 217, 207, .55) 70%, transparent); }
+.gd-separateur::after { content: ""; position: absolute; left: 50%; top: 1px; width: 7px; height: 7px; margin-left: -3.5px; transform: rotate(45deg);
+  background: linear-gradient(135deg, var(--or-pale), var(--or)); box-shadow: 0 0 10px rgba(233, 199, 126, .7); }
+.gd-hero-resume { margin: 18px 0 0; color: var(--texte-2); }
+.gd-hero-petit { margin-bottom: 34px; }
+.gd-hero-petit h1 { font-size: clamp(2.3rem, 5vw, 3.1rem); }
+.gd-encart {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 40px; margin-top: 14px; padding: 4px 16px 4px 6px;
+  font-size: .88rem; color: var(--texte);
+  background: rgba(16, 25, 46, .55); border: 1px solid var(--ligne-forte); border-radius: 999px;
+  transition: border-color .3s, background-color .3s, box-shadow .3s;
+}
+.gd-encart .icon { border-radius: 50%; }
+.gd-encart b { font-weight: 600; color: var(--ivoire); }
+.gd-encart span { color: var(--turquoise); }
+.gd-encart span::after { content: "→"; content: "→" / ""; display: inline-block; margin-left: 6px; transition: transform .35s var(--doux); }
+.gd-encart:hover { text-decoration: none; border-color: rgba(79, 217, 207, .45); background: rgba(79, 217, 207, .08); box-shadow: 0 0 26px -8px rgba(79, 217, 207, .55); }
+.gd-encart:hover span::after { transform: translateX(3px); }
+
+/* Le logo de WoW Forever : un halo qui respire derrière, une lente flottaison, un reflet qui le traverse
+   (une fois à l'arrivée, puis à chaque survol ; le reflet est découpé à la forme du logo par un masque) */
+.gd-logo-scene { position: relative; width: min(250px, 62vw); margin: 0 auto 8px; }
+.gd-logo-halo {
+  position: absolute; inset: -10% -22% -8%; border-radius: 50%; pointer-events: none; opacity: .75;
+  background: radial-gradient(closest-side, rgba(79, 217, 207, .62) 30%, rgba(56, 160, 220, .24) 62%, transparent 100%);
+  filter: blur(20px);
+  animation: gd-respire 7s ease-in-out infinite;
+}
+.gd-logo-flotte { position: relative; display: block; animation: gd-flotte 9s ease-in-out infinite; }
+.gd-logo { display: block; width: 100%; height: auto; filter: drop-shadow(0 16px 26px rgba(0, 0, 0, .55)); }
+.gd-logo-reflet {
+  position: absolute; inset: 0; pointer-events: none;
+  -webkit-mask: url("img/wow-forever-logo.png") center / 100% 100% no-repeat;
+  mask: url("img/wow-forever-logo.png") center / 100% 100% no-repeat;
+  background: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, .07) 45%, rgba(255, 255, 255, .42) 50%, rgba(255, 255, 255, .07) 55%, transparent 60%) 100% 0 / 300% 100% no-repeat;
+  mix-blend-mode: screen;
+  animation: gd-reflet 1.8s var(--doux) 1s 1;
+}
+.gd-logo-scene:hover .gd-logo-reflet { background-position: 0 0; transition: background-position 1.4s var(--doux); }
+@keyframes gd-respire { 0%, 100% { opacity: .5; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes gd-flotte { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes gd-reflet { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+/* L'accueil de la guilde : la présentation (site.json), quelques chiffres de l'armurerie, les classes en petite barre */
+.gd-hero-presentation { max-width: 640px; margin: 18px auto 0; font-size: 1.02rem; color: var(--texte-2); }
+.gd-hero-presentation + .gd-hero-presentation { margin-top: 8px; }
+.gd-chiffres { max-width: 560px; margin: 30px auto 0; }
+.gd-chiffres-ligne { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 40px; }
+.gd-chiffre { display: inline-flex; flex-direction: column; align-items: center; min-width: 110px; padding: 6px 10px; border-radius: var(--r); transition: background-color .25s; }
+.gd-chiffre:hover { text-decoration: none; background: var(--survol); }
+.gd-chiffre b { font-family: var(--font-title); font-size: 2.4rem; font-weight: 700; line-height: 1; font-variant-numeric: lining-nums tabular-nums; color: var(--or-pale);
+  text-shadow: 0 0 22px rgba(233, 199, 126, .25); }
+.gd-chiffre span { margin-top: 6px; font-size: .7rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--texte-3); transition: color .25s; }
+.gd-chiffre:hover span { color: var(--turquoise); }
+.gd-classes { margin-top: 18px; }
+.gd-classes-barre { display: flex; gap: 2px; height: 8px; overflow: hidden; border-radius: 999px; background: rgba(150, 180, 235, .08); box-shadow: inset 0 1px 1px rgba(0, 0, 0, .4); }
+.gd-classes-barre > span { flex: 1 1 0; min-width: 3px; background: currentColor; }
+.gd-classes-legende { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 4px; margin: 10px 0 0; padding: 0; }
+.gd-classes-legende a { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 9px; font-size: .78rem; color: var(--texte-2); border-radius: 999px; transition: color .2s, background-color .2s; }
+.gd-classes-legende a:hover { color: var(--texte); background: var(--survol); text-decoration: none; }
+.gd-classes-legende b, .gd-pastille b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.gd-classes-legende b { color: var(--texte); }
+/* Un point à la couleur d'une classe (c-…) */
+.gd-rond { flex: none; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+
+/* Les rubriques en grandes tuiles (site.json > rubriques) */
+.gd-rubriques { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); gap: 16px; }
+.gd-rubrique { gap: 6px; padding: 30px 22px 24px; border-radius: var(--r-lg); }
+.gd-rubrique .icon.lg { width: 64px; height: 64px; margin-bottom: 12px; border-radius: 18px; }
+.gd-rubrique .gd-tuile-nom { font-size: 1.8rem; }
+.gd-rubrique-desc { max-width: 300px; font-size: .9rem; line-height: 1.5; color: var(--texte-2); }
+.gd-rubrique-chiffre {
+  margin-top: 10px; padding: 3px 14px; font-size: .78rem; font-weight: 600; letter-spacing: .03em; font-variant-numeric: tabular-nums;
+  color: var(--or-pale); background: rgba(233, 199, 126, .07); border: 1px solid rgba(233, 199, 126, .32); border-radius: 999px;
+}
+
+/* La grande recherche « Qui sait faire… ? » */
+.gd-cherche {
+  display: block; width: 100%; height: 56px; padding: 0 18px 0 52px;
+  color: var(--texte); font-size: 1.06rem;
+  background: rgba(4, 8, 18, .55) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234fd9cf' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") 18px 50% / 20px 20px no-repeat;
+  border: 1px solid var(--ligne-forte);
+  border-radius: var(--r);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .35);
+  transition: border-color .3s, box-shadow .3s, background-color .3s;
+}
+.gd-cherche::placeholder { color: var(--texte-3); }
+.gd-cherche:focus { outline: none; border-color: rgba(79, 217, 207, .6); background-color: rgba(4, 8, 18, .75);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .35), 0 0 0 4px rgba(79, 217, 207, .14), 0 0 32px -6px rgba(79, 217, 207, .45); }
+.gd-aide, .gd-aucun { margin: 14px 4px 0; color: var(--texte-2); font-size: .9rem; }
+.gd-aucun { color: var(--texte); }
+.gd-resultats:empty { display: none; }
+.gd-groupe { margin-top: 22px; }
+.gd-groupe-titre {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 6px; padding: 0 4px 8px;
+  font-family: var(--font-body); font-size: .72rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--texte-3); border-bottom: 1px solid var(--ligne);
+}
+.gd-res { display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 7px 10px; color: var(--texte); border-radius: 12px; transition: background-color .2s; }
+a.gd-res:hover, .gd-res:hover { background: var(--survol); text-decoration: none; }
+.gd-res + .gd-res { margin-top: 2px; }
+.gd-res-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+.gd-res-nom { font-weight: 600; overflow-wrap: anywhere; }
+.gd-res-ligne { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+/* « nouveau » : une recette apparue dans le carnet depuis moins de 2 jours */
+.gd-neuf {
+  flex: none; display: inline-block; padding: 1px 7px; font-size: .62rem; font-weight: 700; line-height: 1.5; letter-spacing: .08em; text-transform: uppercase;
+  color: #2a1d05; background: linear-gradient(180deg, var(--or-pale), var(--or)); border-radius: 999px; box-shadow: 0 0 12px -2px rgba(233, 199, 126, .55);
+}
+.gd-res-sous { font-size: .8rem; color: var(--texte-3); }
+.gd-res-qui { flex: none; max-width: 45%; font-size: .86rem; text-align: right; color: var(--texte-2); }
+.gd-res-ic { flex: none; line-height: 0; }
+.gd-res-comp { align-items: flex-start; }
+.gd-puces { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.gd-puce {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 2px 11px 2px 4px; font-size: .8rem; color: var(--texte);
+  background: rgba(150, 180, 235, .06); border: 1px solid var(--ligne); border-radius: 999px;
+  transition: color .2s, border-color .2s, background-color .2s;
+}
+.gd-puce .icon { border-radius: 50%; }
+.gd-puce:hover { color: var(--turquoise-vif); border-color: rgba(79, 217, 207, .4); background: var(--turquoise-voile); text-decoration: none; }
+.gd-metiers-mini { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; }
+.gd-mini-metier { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--texte-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Les métiers en tuiles : élévation douce, liseré lumineux et icône qui s'éclaire au survol */
+.gd-tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
+.gd-tuile {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 22px 12px 18px; text-align: center; color: var(--texte);
+  background: radial-gradient(120% 70% at 50% 0%, rgba(79, 217, 207, .07), transparent 62%), linear-gradient(180deg, rgba(150, 180, 235, .06), rgba(150, 180, 235, .015));
+  border: 1px solid var(--ligne); border-radius: var(--r);
+  transition: transform .45s var(--doux), box-shadow .45s var(--doux), border-color .45s;
+}
+.gd-tuile:hover { text-decoration: none; transform: translateY(-4px); border-color: rgba(79, 217, 207, .2);
+  box-shadow: 0 20px 36px -18px rgba(0, 0, 0, .9), 0 0 34px -12px rgba(79, 217, 207, .5); }
+.gd-tuile:hover::before { opacity: 1; }
+.gd-tuile .icon { margin-bottom: 10px; border-radius: 16px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 0 3px rgba(233, 199, 126, .28), 0 8px 18px -6px rgba(0, 0, 0, .8);
+  transition: transform .45s var(--doux), box-shadow .45s var(--doux); }
+.gd-tuile:hover .icon { transform: scale(1.06); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 0 3px rgba(138, 241, 232, .55), 0 0 24px rgba(79, 217, 207, .45); }
+.gd-tuile-nom { font-family: var(--font-title); font-weight: 700; font-size: 1.3rem; line-height: 1.15; color: var(--ivoire); }
+.gd-tuile-info { font-size: .8rem; color: var(--texte-3); line-height: 1.45; }
+
+/* Les membres */
+.gd-membres { display: grid; gap: 2px; }
+.gd-membre, .gd-qui { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; min-height: 54px; padding: 8px 12px; color: var(--texte); border-radius: 12px; transition: background-color .2s; }
+a.gd-membre:hover, a.gd-qui:hover { background: var(--survol); text-decoration: none; }
+.gd-membre-id, .gd-qui-id { flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.gd-membre-nom { font-weight: 600; font-size: 1rem; overflow-wrap: anywhere; }
+.gd-membre-sous { font-size: .8rem; color: var(--texte-3); }
+.gd-membre-vu { flex: none; margin-left: auto; font-size: .8rem; color: var(--texte-3); white-space: nowrap; }
+.gd-recharge {
+  flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 2px 11px; font-size: .78rem; font-weight: 500; white-space: nowrap;
+  color: var(--attente); background: rgba(255, 184, 107, .08); border: 1px solid rgba(255, 184, 107, .3); border-radius: 999px;
+}
+.gd-recharge::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+.gd-recharge.pret { color: var(--ok); background: rgba(110, 231, 168, .08); border-color: rgba(110, 231, 168, .32); }
+.gd-nbrec { flex: none; font-size: .8rem; color: var(--texte-2); white-space: nowrap; }
+
+/* Les dernières nouveautés des métiers : une ligne par groupe (un membre, un métier, un jour) : icône du métier, nom, ce qu'il a appris, date ;
+   une recette nouvelle pour la guilde porte le badge doré, et sa ligne un filet d'or à gauche */
+.gd-nouveautes-metiers { scroll-margin-top: 84px; }
+/* L'équipement d'un membre (20/11) : deux colonnes comme l'armurerie, les armes dessous */
+.gd-equipement { margin-top: 16px; }
+.gd-eq-tete { margin: 0 0 10px; font-size: .85rem; color: var(--texte-3); }
+.gd-eq-tete b { color: var(--texte); }
+.gd-eq-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 24px; }
+.gd-eq-col { display: grid; gap: 2px; align-content: start; }
+.gd-eq-armes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 24px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--ligne); }
+.gd-eq { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; min-height: 46px; padding: 5px 8px; border-radius: 10px; transition: background-color .2s; }
+.gd-eq:hover { background: var(--survol); }
+.gd-eq.vide { opacity: .55; }
+.gd-eq-ic { line-height: 0; }
+.gd-eq-trou { display: inline-block; width: 32px; height: 32px; border: 1px dashed var(--ligne-forte); border-radius: 8px; }
+.gd-eq-txt { min-width: 0; display: grid; gap: 1px; line-height: 1.3; }
+.gd-eq-nom { font-size: .92rem; font-weight: 600; overflow-wrap: anywhere; }
+.gd-eq-sous { font-size: .76rem; color: var(--texte-3); }
+.gd-eq-ench { font-size: .78rem; color: var(--q-uncommon); }
+/* 1012 : la pièce face à la liste BiS de la spé */
+.gd-eq-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.gd-eq-tag { padding: 0 7px; border: 1px solid var(--ligne-forte); border-radius: 999px; font-size: .68rem; font-weight: 600; line-height: 1.6; color: var(--texte-3); cursor: default; }
+.gd-eq-tag.bis { color: var(--or); border-color: rgba(233, 199, 126, .5); background: rgba(233, 199, 126, .08); }
+.gd-eq-tag.sans { color: #e8857a; border-color: rgba(232, 133, 122, .45); }
+@media (max-width: 700px) { .gd-eq-grille, .gd-eq-armes { grid-template-columns: minmax(0, 1fr); } }
+
+/* Les nouveautés en lignes simples (20/11) : une par ligne, la date à droite */
+.gd-nv-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.gd-nv { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 7px 10px; border-radius: 10px; transition: background-color .2s; }
+.gd-nv:hover { background: rgba(150, 180, 235, .035); }
+.gd-nv.neuf { background: linear-gradient(90deg, rgba(233, 199, 126, .07), transparent 65%); }
+.gd-nv-texte { min-width: 0; font-size: .92rem; line-height: 1.5; color: var(--texte-2); overflow-wrap: anywhere; }
+.gd-nv-texte .icon { vertical-align: -3px; }
+.gd-nv-rec { font-weight: 500; }
+.gd-nv-rec .icon { margin-right: 6px; }
+.gd-nv-sous { color: var(--texte-3); }
+.gd-nv-qui { font-weight: 600; }
+.gd-nv-neuf { display: inline-block; margin-left: 8px; padding: 0 7px; border: 1px solid rgba(233, 199, 126, .45); border-radius: 999px; font-size: .7rem; font-weight: 600; line-height: 1.6; color: var(--or); vertical-align: 1px; }
+.gd-nv-date { font-size: .78rem; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--texte-3); cursor: default; }
+.gd-histo-vide { margin: 0; padding: 2px 4px; font-size: .9rem; font-style: italic; color: var(--texte-3); }
+.gd-badge-neuf { flex: none; padding: 1px 10px; font-size: .72rem; font-weight: 600; white-space: nowrap; color: var(--or-pale); background: rgba(233, 199, 126, .08); border: 1px solid rgba(233, 199, 126, .45); border-radius: 999px; }
+
+/* Le rang dans un métier : une barre fine, du turquoise vers l'or à mesure qu'on approche du plafond
+   (le dégradé couvre toute la piste, 100cqw : un rang bas reste turquoise, un rang au plafond atteint l'or) */
+.gd-rang { flex: none; display: inline-flex; align-items: center; gap: 10px; font-size: .82rem; font-variant-numeric: tabular-nums; }
+.gd-rang-barre, .lv-barre {
+  container-type: inline-size;
+  position: relative; display: block; overflow: hidden; height: 6px; border-radius: 999px;
+  background: rgba(150, 180, 235, .1); box-shadow: inset 0 1px 1px rgba(0, 0, 0, .4);
+}
+.gd-rang-barre { width: 92px; }
+.gd-rang-plein, .lv-barre-plein {
+  position: absolute; inset: 0 auto 0 0; border-radius: inherit;
+  background-image: linear-gradient(90deg, var(--turquoise-sombre), var(--turquoise) 42%, var(--or) 82%, var(--or-pale));
+  background-size: 100% 100%;
+  background-size: 100cqw 100%;
+}
+.gd-rang-txt { min-width: 58px; color: var(--texte-2); }
+
+/* --------------------------------------------------------------------------
+   Le livre de métier d'un membre (préfixe lv-) : un panneau en deux colonnes,
+   la liste par catégories repliables à gauche, le détail de la recette à droite
+   -------------------------------------------------------------------------- */
+.lv-page { margin-top: 22px; }
+.lv-fenetre {
+  position: relative;
+  background: var(--verre);
+  border: 1px solid var(--ligne);
+  border-radius: var(--r-lg);
+  box-shadow: var(--ombre);
+  -webkit-backdrop-filter: var(--verre-flou);
+  backdrop-filter: var(--verre-flou);
+}
+.lv-entete { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; padding: 20px 22px; border-bottom: 1px solid var(--ligne); }
+.lv-portrait { flex: none; line-height: 0; }
+.lv-portrait .icon.lg { border-radius: 16px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 0 3px rgba(233, 199, 126, .32), 0 0 26px -4px rgba(79, 217, 207, .5); }
+.lv-entete-txt { flex: 1 1 260px; min-width: 0; }
+.lv-titre-nom { display: block; margin: 0; font-family: var(--font-title); font-size: 1.9rem; font-weight: 700; line-height: 1.1; color: var(--ivoire); overflow-wrap: anywhere; }
+a.lv-titre-nom:hover { color: var(--turquoise-vif); text-decoration: none; }
+.lv-niveau { display: flex; align-items: center; gap: 12px; max-width: 440px; margin-top: 10px; }
+.lv-barre { flex: 1 1 200px; }
+.lv-barre-txt { flex: none; font-size: .86rem; color: var(--texte-2); font-variant-numeric: tabular-nums; }
+.lv-barre-txt b { font-weight: 600; color: var(--texte); }
+/* Les onglets des métiers : une piste en pastilles, l'onglet choisi en turquoise (rien quand il n'y a qu'un métier) */
+.lv-onglets { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: rgba(3, 7, 16, .35); border: 1px solid var(--ligne); border-radius: 999px; }
+.lv-onglets:has(> .lv-onglet:only-child) { display: none; }
+.lv-onglet {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 4px 15px 4px 6px;
+  font-size: .88rem; font-weight: 500; color: var(--texte-2); cursor: pointer;
+  background: transparent; border: 0; border-radius: 999px;
+  transition: color .2s, background-color .25s, box-shadow .3s;
+}
+.lv-onglet .icon.sm { border-radius: 50%; transition: filter .25s; }
+.lv-onglet:hover { color: var(--texte); background: var(--survol); }
+.lv-onglet:not(.actif) .icon { filter: saturate(.6) brightness(.85); }
+.lv-onglet.actif { color: #04201f; font-weight: 600; background: linear-gradient(180deg, var(--turquoise-vif), var(--turquoise)); box-shadow: 0 6px 18px -6px rgba(79, 217, 207, .7); }
+.lv-corps { display: grid; grid-template-columns: minmax(250px, 38%) minmax(0, 1fr); }
+.lv-gauche { display: flex; flex-direction: column; min-width: 0; background: rgba(3, 7, 16, .22); border-right: 1px solid var(--ligne); }
+.lv-droite { position: relative; min-width: 0; background: radial-gradient(70% 55% at 75% 0%, rgba(79, 217, 207, .07), transparent 70%); }
+.lv-outils { display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid var(--ligne); }
+.lv-cherche {
+  flex: 1; min-width: 0; height: 36px; padding: 0 10px 0 34px; color: var(--texte); font-size: .88rem;
+  background: rgba(3, 7, 16, .5) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237f8da6' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") 11px 50% / 15px 15px no-repeat;
+  border: 1px solid var(--ligne-forte); border-radius: var(--r-sm);
+  transition: border-color .25s, box-shadow .25s;
+}
+.lv-cherche::placeholder { color: var(--texte-3); }
+.lv-cherche:focus { outline: none; border-color: rgba(79, 217, 207, .55); box-shadow: 0 0 0 3px rgba(79, 217, 207, .14); }
+.lv-filtre {
+  flex: none; display: inline-flex; align-items: center; height: 36px; padding: 0 12px; font-size: .8rem; font-weight: 500; white-space: nowrap; cursor: pointer;
+  color: var(--texte-2); background: rgba(255, 255, 255, .03); border: 1px solid var(--ligne-forte); border-radius: var(--r-sm);
+  transition: color .2s, border-color .2s, background-color .2s;
+}
+.lv-filtre:hover { color: var(--turquoise-vif); border-color: rgba(79, 217, 207, .4); background: var(--turquoise-voile); }
+.lv-liste {
+  position: relative; max-height: 560px; min-height: 320px; overflow-y: auto; padding: 4px 8px 22px;
+  overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(150, 180, 235, .22) transparent;
+  /* un fondu en bas : la liste continue */
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 22px), transparent);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 22px), transparent);
+}
+/* Les catégories : des intitulés sobres, un chevron qui tourne */
+.lv-cat {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 34px; margin: 10px 0 2px; padding: 4px 8px 4px 10px;
+  font-size: .72rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; text-align: left; color: var(--texte-3); cursor: pointer;
+  background: none; border: 0; border-radius: 8px; transition: color .2s, background-color .2s;
+}
+.lv-cat:hover { color: var(--texte); background: var(--survol); }
+.lv-cat-nom { min-width: 0; }
+.lv-cat-droite { flex: none; display: inline-flex; align-items: center; gap: 8px; }
+.lv-plie { flex: none; width: 16px; height: 16px; display: grid; place-items: center; }
+.lv-plie::before { content: ""; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .3s var(--doux); }
+.lv-cat[aria-expanded="false"] .lv-plie::before { transform: translateX(-1px) rotate(-45deg); }
+.lv-rec {
+  position: relative; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 4px 10px 4px 22px;
+  font-size: .9rem; text-align: left; color: var(--texte); cursor: pointer;
+  background: none; border: 0; border-radius: 8px; transition: background-color .15s;
+}
+.lv-rec-nom { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-rec:hover { background: var(--survol); }
+/* La couleur de difficulté, comme en jeu */
+.lv-rec.qd-orange { color: var(--d-orange); }
+.lv-rec.qd-yellow { color: var(--d-jaune); }
+.lv-rec.qd-green { color: var(--d-vert); }
+.lv-rec.qd-grey { color: var(--d-gris); }
+.lv-rec.choisie { background: linear-gradient(90deg, rgba(79, 217, 207, .16), rgba(79, 217, 207, .03)); box-shadow: inset 0 0 0 1px rgba(79, 217, 207, .22); }
+.lv-rec.choisie::before { content: ""; position: absolute; left: 9px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: var(--turquoise-vif); box-shadow: 0 0 8px var(--turquoise); }
+.lv-vide { padding: 22px 10px; font-size: .86rem; text-align: center; color: var(--texte-3); }
+
+/* Le détail d'une recette */
+.lv-detail { padding: 24px 26px 22px; }
+.lv-tete { display: flex; align-items: center; gap: 16px; }
+.lv-tete-txt { min-width: 0; }
+.lv-rond { flex: none; line-height: 0; }
+.lv-rond a { display: block; line-height: 0; }
+.lv-rond .icon.lg { width: 60px; height: 60px; border-radius: 15px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 0 3px rgba(150, 180, 235, .16), 0 12px 26px -10px rgba(0, 0, 0, .9); }
+.lv-nom { margin: 0; font-family: var(--font-body); font-size: 1.22rem; font-weight: 600; line-height: 1.3; letter-spacing: -.005em; color: var(--texte); overflow-wrap: anywhere; }
+.lv-sous { margin-top: 3px; font-size: .8rem; color: var(--texte-3); }
+.lv-desc { margin: 16px 0 6px; font-size: .94rem; color: var(--texte); }
+.lv-stats { list-style: none; margin: 6px 0 0; padding: 0; font-size: .88rem; color: var(--q-uncommon); }
+.lv-stats .blanc { color: #fff; }
+.lv-or { display: flex; align-items: center; gap: 10px; margin: 22px 0 10px; font-size: .72rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--or); }
+.lv-or::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(233, 199, 126, .3), transparent); }
+.lv-comps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.lv-comp { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 6px 10px 6px 6px; background: rgba(150, 180, 235, .04); border: 1px solid var(--ligne); border-radius: 12px; }
+.lv-comp-ic { position: relative; flex: none; line-height: 0; }
+.lv-comp-ic a { display: inline-block; line-height: 0; }
+.lv-comp-ic .icon.md { width: 40px; height: 40px; border-radius: 10px; }
+.lv-comp-ic b {
+  position: absolute; right: -5px; bottom: -5px; min-width: 19px; padding: 0 5px; line-height: 17px; text-align: center; pointer-events: none;
+  font-size: .7rem; font-weight: 700; color: var(--texte); background: var(--nuit-800); border: 1px solid var(--ligne-forte); border-radius: 999px;
+}
+.lv-comp-nom { min-width: 0; font-size: .86rem; line-height: 1.3; overflow-wrap: anywhere; }
+.lv-comp-nom a, .lv-comp-nom a:visited { color: var(--texte); }
+.lv-comp-nom a:hover { color: var(--turquoise-vif); }
+.lv-bas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 22px; font-size: .8rem; color: var(--texte-2); }
+.lv-bas > :not(.gd-recharge) { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 2px 12px; background: rgba(150, 180, 235, .05); border: 1px solid var(--ligne); border-radius: 999px; }
+.lv-bas > .gd-recharge { min-height: 28px; }
+.lv-cd { color: var(--texte); }
+.lv-qui { display: inline-flex; align-items: center; min-height: 32px; margin-top: 14px; font-size: .86rem; font-weight: 500; }
+.lv-pied { padding: 10px 16px 12px; font-size: .76rem; color: var(--texte-3); text-align: center; border-top: 1px solid var(--ligne); }
+/* La page d'une seule recette : pas de liste, pas d'onglets */
+.lv-seule, .lv-seule + .stack { max-width: 780px; margin-left: auto; margin-right: auto; }
+.lv-seule .lv-corps { grid-template-columns: 1fr; }
+.lv-seule .lv-entete { padding: 14px 22px; }
+.lv-seule .lv-portrait .icon.lg { width: 38px; height: 38px; border-radius: 11px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 0 2px rgba(233, 199, 126, .3); }
+.lv-seule .lv-titre-nom { display: inline-flex; align-items: center; min-height: 32px; font-family: var(--font-body); font-size: .95rem; font-weight: 600; letter-spacing: .01em; color: var(--texte-2); }
+.lv-seule .lv-detail { padding: 26px 28px 24px; }
+.lv-seule .lv-nom { font-size: 1.5rem; }
+
+/* --------------------------------------------------------------------------
+   L'en-tête d'une rubrique (Membres, Métiers, Addons) : son icône, son titre, une ligne
+   -------------------------------------------------------------------------- */
+.gd-tete-rubrique { flex-wrap: wrap; gap: 16px 22px; }
+.gd-tete-txt { flex: 1 1 180px; min-width: 0; }
+.gd-tete-rubrique .gd-encart { margin: 0; }
+
+/* --------------------------------------------------------------------------
+   Les membres (data/membres.json, l'armurerie officielle) : recherche, filtres en pastilles, une ligne par membre
+   -------------------------------------------------------------------------- */
+.gd-roster-cadre { margin-top: 22px; }
+.gd-roster-outils { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.gd-membres-cherche { flex: 1 1 240px; max-width: 420px; height: 40px; }
+.gd-roster-compte { margin: 0 0 0 auto; font-size: .84rem; color: var(--texte-3); font-variant-numeric: tabular-nums; }
+.gd-pastilles { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 10px; }
+.gd-pastille {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 13px;
+  font-size: .84rem; font-weight: 500; color: var(--texte-2); cursor: pointer;
+  background: rgba(150, 180, 235, .05); border: 1px solid var(--ligne); border-radius: 999px;
+  transition: color .2s, background-color .2s, border-color .2s, box-shadow .3s;
+}
+.gd-pastille b { font-size: .74rem; color: var(--texte-3); }
+.gd-pastille:hover { color: var(--texte); background: var(--survol); border-color: var(--ligne-forte); }
+.gd-pastille.actif { color: var(--turquoise-vif); background: var(--turquoise-voile); border-color: rgba(79, 217, 207, .45); box-shadow: 0 0 16px -6px rgba(79, 217, 207, .55); }
+.gd-pastille.actif b { color: var(--turquoise); }
+/* La liste : un tableau sans en-tête (les colonnes s'alignent d'une ligne à l'autre par subgrid), des cartes sous 980 px */
+.gd-roster {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: minmax(0, 1.3fr) 56px minmax(0, 1.3fr) minmax(0, 1fr) 76px auto; gap: 2px 18px;
+}
+.gd-perso {
+  grid-column: 1 / -1;
+  display: grid; grid-template-columns: minmax(0, 1.3fr) 56px minmax(0, 1.3fr) minmax(0, 1fr) 76px minmax(150px, auto);
+  grid-template-columns: subgrid;
+  align-items: center; column-gap: 18px; min-height: 60px; padding: 8px 12px; border-radius: 12px; transition: background-color .2s;
+}
+.gd-perso:hover { background: var(--survol); }
+.gd-perso-id { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.gd-perso-nom { align-self: flex-start; font-size: 1.02rem; font-weight: 600; overflow-wrap: anywhere; }
+.gd-perso-surnom { font-size: .78rem; color: var(--texte-3); overflow-wrap: anywhere; }
+.gd-perso-chiffre { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.gd-perso-chiffre b { font-family: var(--font-title); font-size: 1.4rem; font-weight: 700; font-variant-numeric: lining-nums tabular-nums; color: var(--ivoire); }
+.gd-perso-chiffre b.muted { color: var(--texte-3); }
+.gd-perso-chiffre small { margin-top: 2px; font-size: .62rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; color: var(--texte-3); }
+.gd-perso-race { display: flex; flex-direction: column; min-width: 0; font-size: .9rem; line-height: 1.3; }
+.gd-perso-race small { font-size: .76rem; color: var(--texte-3); }
+.gd-rang-badge {
+  display: inline-flex; align-items: center; min-height: 24px; padding: 1px 11px; font-size: .76rem; font-weight: 500; line-height: 1.3;
+  color: var(--texte-2); background: rgba(150, 180, 235, .06); border: 1px solid var(--ligne); border-radius: 999px;
+}
+.gd-rang-badge.chef { color: var(--or-pale); background: rgba(233, 199, 126, .08); border-color: rgba(233, 199, 126, .42); }
+.gd-perso-liens { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 12px; }
+.gd-badge-metiers {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 30px; padding: 2px 12px 2px 6px; white-space: nowrap;
+  font-size: .78rem; font-weight: 600; color: var(--turquoise-vif); background: var(--turquoise-voile); border: 1px solid rgba(79, 217, 207, .35); border-radius: 999px;
+  transition: background-color .2s, box-shadow .3s;
+}
+.gd-badge-metiers:hover { color: var(--turquoise-vif); text-decoration: none; background: rgba(79, 217, 207, .2); box-shadow: 0 0 18px -6px rgba(79, 217, 207, .6); }
+.gd-badge-icones { display: inline-flex; }
+.gd-badge-icones .icon { border-radius: 50%; box-shadow: 0 0 0 1.5px var(--nuit-850); }
+.gd-badge-icones .icon + .icon { margin-left: -5px; }
+.gd-officielle { display: inline-flex; align-items: center; min-height: 30px; font-size: .84rem; white-space: nowrap; }
+.gd-ext { font-size: .9em; }
+.gd-roster-vide { grid-column: 1 / -1; padding: 26px 0 8px; text-align: center; color: var(--texte-2); }
+
+/* --------------------------------------------------------------------------
+   Un membre
+   -------------------------------------------------------------------------- */
+.gd-tete-membre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.gd-tete-membre h1 { margin: 0; font-size: 2.7rem; font-weight: 700; overflow-wrap: anywhere; }
+.gd-tete-membre .gd-membre-sous { font-size: .9rem; color: var(--texte-2); }
+.gd-tete-surnom { font-family: var(--font-title); font-size: 1.4rem; font-weight: 600; color: var(--texte-2); overflow-wrap: anywhere; }
+/* Son profil d'après l'armurerie : des cases, et la fiche officielle */
+.gd-profil { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-top: 18px; }
+.gd-faits { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.gd-fait { display: flex; flex-direction: column; min-width: 96px; padding: 8px 14px 9px; background: rgba(150, 180, 235, .045); border: 1px solid var(--ligne); border-radius: 12px; }
+.gd-fait dt { font-size: .64rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--texte-3); }
+.gd-fait dd { margin: 2px 0 0; font-weight: 600; color: var(--texte); font-variant-numeric: tabular-nums; }
+.gd-officielle-btn { flex: none; }
+.gd-homonymes { margin: 14px 0 0; font-size: .86rem; color: var(--texte-2); }
+.gd-homonymes a { font-weight: 600; }
+.gd-pas-partage { margin: 26px 0 0; text-align: center; color: var(--texte-2); }
+.gd-pas-partage a { font-weight: 500; }
+.gd-autres { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 14px; font-size: .88rem; color: var(--texte-2); }
+.gd-autre {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 3px 13px 3px 5px; color: var(--texte);
+  background: rgba(150, 180, 235, .05); border: 1px solid var(--ligne); border-radius: 999px;
+  transition: color .2s, border-color .2s, background-color .2s;
+}
+.gd-autre .icon { border-radius: 50%; }
+.gd-autre:hover { color: var(--turquoise-vif); border-color: rgba(79, 217, 207, .4); background: var(--turquoise-voile); text-decoration: none; }
+.gd-autre i { font-style: normal; font-size: .8rem; color: var(--texte-3); }
+
+/* --------------------------------------------------------------------------
+   Un métier
+   -------------------------------------------------------------------------- */
+.gd-tete-metier { display: flex; align-items: center; gap: 22px; }
+.gd-tete-metier .icon { border-radius: 20px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 0 3px rgba(233, 199, 126, .35), 0 0 36px -6px rgba(79, 217, 207, .55); }
+.gd-tete-metier h1 { margin: 0; font-size: 2.7rem; font-weight: 700; }
+.gd-tete-metier p { margin: 4px 0 0; color: var(--texte-2); }
+.gd-metier { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 22px; align-items: start; margin-top: 22px; }
+.gd-filtre { max-width: 380px; margin: 0 0 8px; }
+.gd-filtre .lv-cherche { width: 100%; height: 40px; }
+.gd-cat-corps { padding: 2px 0 6px; }
+.gd-rec { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 5px 10px; color: var(--texte); border-radius: var(--r-sm); transition: background-color .2s; }
+.gd-rec:hover { background: var(--survol); text-decoration: none; }
+.gd-rec .gd-res-txt { line-height: 1.3; }
+.gd-rec-nom { font-size: .92rem; font-weight: 500; overflow-wrap: anywhere; }
+
+/* --------------------------------------------------------------------------
+   Les addons (site.json > addons) : une carte chacun
+   -------------------------------------------------------------------------- */
+.gd-addons { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr)); gap: 22px; margin-top: 22px; }
+.gd-addon { display: flex; flex-direction: column; }
+.gd-addon-tete { display: flex; align-items: center; gap: 16px; }
+.gd-addon-tete .icon { border-radius: 16px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 0 3px rgba(233, 199, 126, .3), 0 0 26px -6px rgba(79, 217, 207, .5); }
+.gd-addon-txt { min-width: 0; }
+.gd-addon h2 { margin: 0; font-size: 1.75rem; font-weight: 700; overflow-wrap: anywhere; }
+.gd-addon h2 a { color: var(--ivoire); }
+.gd-addon h2 a:hover { color: var(--turquoise-vif); text-decoration: none; }
+.gd-addon .gd-version { margin-top: 2px; }
+.gd-addon-desc { flex: 1; margin: 16px 0 0; color: var(--texte-2); }
+.gd-addon-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+/* --------------------------------------------------------------------------
+   L'addon des métiers
+   -------------------------------------------------------------------------- */
+/* En toute transparence : ce qu'il partage, ce qu'il ne fait jamais (addon/LISEZMOI.txt) */
+.gd-pourquoi { max-width: 760px; margin: 0 auto 20px; text-align: center; color: var(--texte-2); }
+.gd-pourquoi b { font-weight: 600; color: var(--or); }
+.gd-transp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.gd-oui, .gd-non { position: relative; overflow: hidden; padding: 18px 20px 16px; background: rgba(150, 180, 235, .035); border: 1px solid var(--ligne); border-radius: var(--r); }
+.gd-oui::before, .gd-non::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; }
+.gd-oui::before { background: linear-gradient(90deg, transparent, var(--ok), transparent); }
+.gd-non::before { background: linear-gradient(90deg, transparent, var(--non), transparent); }
+.gd-transp h3, .gd-point h3 { margin: 0 0 10px; font-family: var(--font-body); font-size: 1rem; font-weight: 600; letter-spacing: 0; color: var(--ivoire); }
+.gd-transp ul { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+.gd-transp li { position: relative; padding-left: 28px; }
+.gd-transp li::before { position: absolute; left: 0; top: .2em; width: 18px; height: 18px; display: grid; place-items: center; font-size: .66rem; font-weight: 700; line-height: 1; border-radius: 50%; }
+.gd-oui li::before { content: "✓"; content: "✓" / ""; color: var(--ok); background: rgba(110, 231, 168, .12); box-shadow: inset 0 0 0 1px rgba(110, 231, 168, .3); }
+.gd-non li::before { content: "✕"; content: "✕" / ""; color: var(--non); background: rgba(255, 125, 110, .12); box-shadow: inset 0 0 0 1px rgba(255, 125, 110, .3); }
+.gd-transp p { margin: 0; }
+.gd-points { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 32px; margin-top: 26px; }
+.gd-point h3 { display: flex; align-items: center; gap: 10px; }
+.gd-point h3::before { content: ""; flex: none; width: 6px; height: 6px; transform: rotate(45deg); background: var(--turquoise); box-shadow: 0 0 8px var(--turquoise); }
+.gd-point p { margin: 0 0 8px; color: var(--texte-2); }
+.gd-docs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+.gd-telecharger { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 24px; padding: 6px 0 2px; text-align: center; }
+.gd-etapes-cf { margin: 6px 0 0; padding-left: 1.3em; color: var(--texte-2); text-align: left; display: grid; gap: 4px; }
+.gd-gros-bouton { min-height: 54px; padding: 0 28px 0 10px; font-size: 1.04rem; }
+.gd-gros-bouton .icon { border-radius: 50%; box-shadow: 0 0 0 2px rgba(4, 32, 31, .35); }
+.gd-version { margin: 0; font-size: .9rem; color: var(--texte-2); }
+.gd-version b { font-weight: 600; color: var(--or); }
+.gd-texte { flex-basis: 100%; margin: 0; }
+.gd-commandes { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 20px; margin: 0; align-items: baseline; }
+.gd-commandes dt { margin: 0; }
+.gd-commandes dd { margin: 0; color: var(--texte-2); }
+/* Les nouveautés en frise : un point par version, la dernière allumée */
+.gd-nouveautes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.gd-nouveautes li { position: relative; padding: 8px 12px 10px 30px; }
+.gd-nouveautes li::before { content: ""; position: absolute; left: 6px; top: 17px; width: 9px; height: 9px; border-radius: 50%; background: var(--nuit-600); box-shadow: 0 0 0 3px rgba(150, 180, 235, .08); }
+.gd-nouveautes li::after { content: ""; position: absolute; left: 10px; top: 32px; bottom: -14px; width: 1px; background: var(--ligne-forte); }
+.gd-nouveautes li:last-child::after { display: none; }
+.gd-nouveautes li:first-child::before { background: var(--turquoise); box-shadow: 0 0 0 3px rgba(79, 217, 207, .18), 0 0 12px var(--turquoise); }
+.gd-nouveautes .gd-nv-tete { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+.gd-nouveautes b { font-weight: 600; color: var(--ivoire); }
+.gd-nouveautes li:first-child b { color: var(--turquoise-vif); }
+.gd-nouveautes .gd-nv-date { font-size: .8rem; color: var(--texte-3); }
+.gd-nouveautes p { margin: 4px 0 0; color: var(--texte-2); }
+
+/* Le carnet vide, une page introuvable */
+.gd-vide { padding: 6px 0; text-align: center; }
+.gd-vide p { max-width: 620px; margin: 0 auto 18px; color: var(--texte-2); }
+
+/* L'arrivée d'une page : un fondu qui monte, à peine */
+#vue > * { animation: gd-entree .45s var(--doux) both; }
+#vue > :nth-child(2) { animation-delay: .04s; }
+#vue > :nth-child(3) { animation-delay: .08s; }
+@keyframes gd-entree { from { opacity: 0; transform: translateY(8px); } }
+
+/* --------------------------------------------------------------------------
+   Tablette et téléphone
+   -------------------------------------------------------------------------- */
+/* Les membres en cartes : nom et niveau, race et niveau d'objet, rang et liens */
+@media (max-width: 980px) {
+  .gd-roster { grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 8px; }
+  .gd-perso {
+    grid-column: auto; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "id id niv" "race race ilvl" "rang liens liens";
+    gap: 8px 12px; padding: 12px 14px; background: rgba(150, 180, 235, .035); border: 1px solid var(--ligne);
+  }
+  .gd-perso-id { grid-area: id; }
+  .gd-perso-niv { grid-area: niv; }
+  .gd-perso-race { grid-area: race; }
+  .gd-perso-ilvl { grid-area: ilvl; }
+  .gd-perso-rang { grid-area: rang; }
+  .gd-perso-liens { grid-area: liens; }
+  .gd-perso-chiffre { align-items: flex-end; }
+  .gd-perso-rang:empty + .gd-perso-chiffre + .gd-perso-liens { grid-column: 1 / -1; }
+}
+@media (max-width: 900px) {
+  .gd-menu { position: relative; }
+  .gd-metier { grid-template-columns: 1fr; }
+  .gd-metier > .gd-metier-membres { order: -1; }
+  .lv-corps { grid-template-columns: 1fr; }
+  .lv-gauche { border-right: 0; border-bottom: 1px solid var(--ligne); }
+  .lv-liste { max-height: 320px; min-height: 0; }
+}
+@media (max-width: 640px) {
+  .gd-menu-in { justify-content: center; gap: 8px; padding: 10px 12px; }
+  .gd-marque { justify-content: center; width: 100%; }
+  .gd-nav { justify-content: center; }
+  .gd-lien { padding: 0 14px; font-size: .88rem; }
+  .gd-deroule > .gd-lien { padding-right: 2px; }
+  .gd-deroule { position: static; }
+  .gd-panneau { left: 12px; right: 12px; top: calc(100% + 6px); width: auto; min-width: 0; max-width: none; }
+  .gd-panneau-lien { white-space: normal; line-height: 1.2; }
+  .gd-vue { padding: 22px 16px 56px; }
+  @media (max-width: 480px) { .gd-panneau { grid-template-columns: 1fr; } }
+  /* Les quatre entrées du menu sur une seule ligne à 375 px */
+  @media (max-width: 420px) {
+    .gd-nav { gap: 2px; }
+    .gd-lien { padding: 0 9px; font-size: .84rem; }
+    .gd-deroule > .gd-lien { padding-right: 0; }
+    .gd-ouvrir { padding-right: 2px; }
+  }
+  .frame { padding: 20px 16px 18px; border-radius: 18px; }
+  .frame-title { font-size: 1.35rem; }
+  .gd-hero { margin-bottom: 30px; }
+  .gd-hero-guilde { padding-left: .2em; font-size: .7rem; letter-spacing: .2em; line-height: 1.8; }
+  .gd-chiffres-ligne { gap: 4px 18px; }
+  .gd-chiffre b { font-size: 2.1rem; }
+  .gd-rubrique { padding: 24px 18px 20px; }
+  .gd-rubrique .gd-tuile-nom { font-size: 1.6rem; }
+  .gd-tete-membre .gd-tete-surnom { font-size: 1.2rem; }
+  .gd-profil { margin-top: 14px; }
+  .gd-fait { flex: 1 1 calc(50% - 4px); min-width: 0; }
+  .gd-officielle-btn { width: 100%; }
+  .gd-roster-compte { margin-left: 0; }
+  .gd-addon h2 { font-size: 1.5rem; }
+  .gd-tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .gd-tuile { padding: 18px 8px 14px; }
+  .gd-tuile .icon.lg { width: 48px; height: 48px; border-radius: 14px; }
+  .gd-res { flex-wrap: wrap; }
+  .gd-res-qui { flex-basis: 100%; max-width: none; padding-left: 34px; text-align: left; }
+  .gd-res-comp .gd-res-qui { padding-left: 0; }
+  .gd-membre-vu { margin-left: 0; }
+  .gd-rec { flex-wrap: wrap; }
+  .gd-rec .gd-res-qui { padding-left: 34px; }
+  .gd-transp, .gd-points { grid-template-columns: 1fr; }
+  .gd-tete-membre h1, .gd-tete-metier h1 { font-size: 2.1rem; }
+  .gd-tete-metier { gap: 16px; }
+  .gd-tete-metier .icon.xl { width: 58px; height: 58px; border-radius: 16px; }
+  .gd-res, .gd-rec { row-gap: 2px; }
+  .lv-entete { gap: 14px; padding: 16px; }
+  .lv-entete-txt { flex: 1 1 0; }
+  .lv-portrait .icon.lg { width: 48px; height: 48px; border-radius: 14px; }
+  .lv-titre-nom { font-size: 1.6rem; }
+  /* Les onglets en barre d'onglets de téléphone : l'icône au-dessus du nom, une colonne chacun */
+  .lv-onglets { flex-basis: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); border-radius: 16px; }
+  .lv-onglet { flex-direction: column; justify-content: center; gap: 3px; min-height: 54px; padding: 6px 4px; font-size: .74rem; border-radius: 12px; }
+  .lv-onglet-nom { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lv-detail, .lv-seule .lv-detail { padding: 20px 16px; }
+  .lv-seule .lv-entete { padding: 12px 16px; }
+  .lv-seule .lv-nom { font-size: 1.3rem; }
+  .lv-comps { grid-template-columns: 1fr; }
+  .gd-commandes { grid-template-columns: 1fr; gap: 2px; }
+  .gd-commandes dd { margin-bottom: 10px; }
+}
+/* Au doigt, des cibles d'au moins 32 px */
+@media (pointer: coarse) {
+  .lv-rec, .lv-cat { min-height: 40px; }
+  .gd-puce { min-height: 34px; }
+  .gd-classes-legende a, .gd-officielle, .gd-badge-metiers { min-height: 34px; }
+  .gd-perso-nom { display: inline-flex; align-items: center; min-width: 32px; min-height: 32px; }
+  /* Un composant cherché dans Métiers : son icône et son nom mènent à Wowhead */
+  .gd-res-comp .gd-res-ic { display: inline-grid; place-items: center; min-width: 32px; min-height: 32px; margin: -5px; }
+  .gd-res-comp .gd-res-nom { align-self: flex-start; padding-block: 5px; margin-block: -5px; }
+  /* Les liens dans le texte : un remplissage vertical qui agrandit la cible sans écarter les lignes */
+  .gd-fil a, .gd-pied a, .lv-comp-nom a, .lv-nom a, .gd-homonymes a, .gd-pas-partage a, .gd-addon h2 a { padding-block: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* ---------------------------------------------------------------- Envoyer mes métiers (le code de /lbf code) */
+.gd-code-etapes { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; }
+.gd-code-etapes li { display: flex; align-items: flex-start; gap: 14px; }
+.gd-code-etapes p { margin: 3px 0 0; color: var(--texte-2); }
+.gd-code-n {
+  flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  font-family: var(--font-title); font-weight: 600; color: var(--turquoise-vif);
+  background: var(--turquoise-voile); box-shadow: inset 0 0 0 1px rgba(79, 217, 207, .35);
+}
+.gd-code-champ {
+  display: block; width: 100%; min-height: 120px; padding: 14px 16px; resize: vertical;
+  font-family: var(--font-mono); font-size: .85rem; line-height: 1.5; word-break: break-all;
+  background: rgba(4, 8, 18, .55); border: 1px solid var(--ligne-forte); border-radius: var(--r);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .35); transition: border-color .3s, box-shadow .3s;
+}
+.gd-code-champ::placeholder { color: var(--texte-3); }
+.gd-code-champ:focus { outline: none; border-color: rgba(79, 217, 207, .6); box-shadow: inset 0 2px 8px rgba(0, 0, 0, .35), 0 0 0 4px rgba(79, 217, 207, .14); }
+.gd-code-apercu:empty, .gd-code-retour:empty { display: none; }
+.gd-code-apercu { margin-top: 14px; padding: 12px 16px; background: rgba(255, 255, 255, .03); border: 1px solid var(--ligne); border-radius: var(--r); }
+.gd-code-apercu p { margin: 0; }
+.gd-code-qui b { font-weight: 600; }
+.gd-code-metiers { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.gd-code-metiers li { display: inline-flex; align-items: center; gap: 8px; font-size: .92rem; }
+.gd-code-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+.gd-code-actions .btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; filter: none; }
+.gd-code-retour { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 14px; }
+.gd-code-retour p { margin: 0; }
+.gd-code-oui { color: var(--ok); }
+.gd-code-non { color: var(--non); }
+kbd {
+  display: inline-block; min-width: 1.6em; padding: 0 6px; font: inherit; font-size: .82em; text-align: center;
+  color: var(--ivoire); background: rgba(255, 255, 255, .06); border: 1px solid var(--ligne-forte); border-bottom-width: 2px; border-radius: 6px;
+}
+
+/* ---------------------------------------------------------------- Prêtes maintenant : les recharges de la guilde */
+.gd-rch { display: grid; gap: 2px; }
+.gd-rch-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; min-height: 54px; padding: 8px 12px; border-radius: 12px; transition: background-color .2s; }
+.gd-rch-ligne:hover { background: var(--survol); }
+.gd-rch-recette { flex: 1 1 240px; min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: center; color: var(--texte); line-height: 1.35; }
+.gd-rch-recette .icon { grid-row: span 2; }
+.gd-rch-recette:hover { text-decoration: none; }
+.gd-rch-recette:hover .gd-res-nom { text-decoration: underline; }
+.gd-rch-qui { display: flex; flex-wrap: wrap; gap: 6px; }
+a.gd-recharge:hover { text-decoration: none; filter: brightness(1.18); }
+.gd-recharge.inconnue { color: var(--texte-3); background: rgba(255, 255, 255, .03); border-color: var(--ligne-forte); }
+.gd-recharge.inconnue::before { box-shadow: none; }
+
+/* ---------------------------------------------------------------- Par emplacement (989) et spécialisations (996) */
+.gd-empl-tete { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 14px; }
+.gd-empl-titre { flex: none; font-size: .78rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--texte-3); }
+.gd-empl { display: flex; flex-wrap: wrap; gap: 6px; }
+.gd-entete > .gd-empl { margin-top: 18px; }
+.gd-empl-lien {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 3px 12px 3px 4px; font-size: .86rem; color: var(--texte-2);
+  background: rgba(255, 255, 255, .03); border: 1px solid var(--ligne); border-radius: 999px; transition: border-color .25s, background-color .25s, color .25s;
+}
+.gd-empl-lien .icon { border-radius: 50%; }
+.gd-empl-lien:hover { text-decoration: none; color: var(--texte); border-color: rgba(79, 217, 207, .4); background: var(--turquoise-voile); }
+.gd-empl-lien.actif { color: var(--turquoise-vif); border-color: rgba(79, 217, 207, .55); background: var(--turquoise-voile); }
+/* Le type d'une pièce (tissu, cuir… ; épée, baguette… ; libram…), sous les emplacements */
+.gd-entete > .gd-types { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ligne); }
+.gd-empl-n { min-width: 20px; margin-right: -4px; padding: 0 6px; font-size: .74rem; font-weight: 600; line-height: 18px; text-align: center; color: var(--texte-3);
+  background: rgba(255, 255, 255, .06); border-radius: 999px; }
+.gd-empl-lien.actif .gd-empl-n { color: var(--turquoise-vif); background: rgba(79, 217, 207, .14); }
+.gd-res-liste { display: grid; gap: 2px; }
+.gd-res-effet { font-size: .86rem; color: var(--q-uncommon); opacity: .9; }
+.gd-spe {
+  flex: none; display: inline-flex; align-items: center; padding: 2px 11px; font-size: .78rem; font-weight: 500; white-space: nowrap;
+  color: var(--or-pale); background: rgba(233, 199, 126, .08); border: 1px solid rgba(233, 199, 126, .3); border-radius: 999px;
+}
+.lv-titre-spe { display: block; margin-top: 2px; font-family: var(--font-body); font-size: .82rem; font-weight: 500; letter-spacing: 0; color: var(--or-pale); }
+.lv-spe-req { margin: 0 0 12px; font-size: .88rem; color: var(--or-pale); }
+.lv-spe-req b { font-weight: 600; }
+

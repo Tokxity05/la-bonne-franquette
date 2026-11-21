@@ -1,0 +1,45 @@
+name: Membres de la guilde
+
+# La rubrique Membres du site, relue sur l'armurerie officielle toutes les heures, même quand aucun PC n'est allumé. GitHub saute la plupart
+# de ses passages programmés : le relais Cloudflare (service/worker.js, Cron Trigger) le lance chaque heure par workflow_dispatch ; le cron d'ici reste en secours.
+on:
+  schedule:
+    - cron: "37 * * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/scripts/membres.py"
+      - ".github/workflows/membres.yml"
+
+permissions:
+  contents: write
+
+concurrency: membres
+
+jobs:
+  membres:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main  # la dernière version du site (et du dernier equipement.json), pas celle qui a déclenché le passage
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Relire l'armurerie
+        run: python .github/scripts/membres.py
+      - name: Publier si la liste a changé
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/*.json  # membres.json et equipement.json (un fichier absent ne fait pas échouer)
+          if git diff --cached --quiet; then echo "Rien de changé."; exit 0; fi
+          git commit -m "Membres : mise à jour depuis l'armurerie"
+          # le site a pu changer pendant la relecture (une publication, un autre passage) : on se remet à niveau ; en cas de conflit, nos fichiers
+          # l'emportent (ils sont réécrits en entier à chaque passage) ; trois échecs : on laisse tomber sans erreur, le passage suivant refera tout
+          for essai in 1 2 3; do
+            git pull --rebase -X theirs origin main && git push && exit 0
+            git rebase --abort 2>/dev/null || true
+            sleep 10
+          done
+          echo "::warning::Envoi impossible après trois essais : le prochain passage réessaiera."
