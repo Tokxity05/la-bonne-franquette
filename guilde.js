@@ -1260,7 +1260,7 @@
               CFG.service ? h("a", { href: "#/metiers/envoyer" }, "Métiers › Envoyer mes métiers") : "Métiers › Envoyer mes métiers", ". C'est toi qui le fais, quand tu veux : l'addon, lui, n'envoie toujours rien sur internet.")),
             point("Il ne ralentit pas le jeu", h("p", {}, "Rien en continu : une lecture quand tu ouvres une fenêtre de métier, et l'envoi de ta fiche à la connexion ou quand tu apprends une recette, en quelques petits messages espacés.")),
             point("Tu restes maître", h("p", {}, "Un bouton rond près de la mini-carte montre que l'addon tourne : au survol, ce qui est partagé et si le partage est actif ; clic droit pour le mettre en pause (l'icône devient grise)."), h("p", {}, h("code", {}, "/lbf pause"), " : plus rien ne part, et ta fiche s'efface chez les membres connectés. ", h("code", {}, "/lbf reprendre"), " relance le partage."),
-              h("p", {}, "Pour que tes métiers disparaissent aussi du site, mets l'addon en pause, puis colle ton code de /lbf code dans Envoyer mes métiers (en pause, il efface ta fiche), ou demande à Tokxity : il l'efface sur demande. Personne n'est obligé de l'installer."))))),
+              h("p", {}, "Pour que tes métiers disparaissent aussi du site, mets l'addon en pause, puis colle ton code de /lbf code dans Envoyer mes métiers (en pause, il efface ta fiche), ou demande à Tokxity : il l'efface sur demande. Personne n'est obligé de l'installer.")))),
         // Melvin (18/11) : « les gens savent installer un addon » ; reste la seule chose propre à celui-ci
         blocTelecharger(A, "Une fois installé, ouvre une fois chacun de tes métiers : c'est tout."),
         blocNouveautesAddon(A),
