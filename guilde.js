@@ -1236,8 +1236,7 @@
     setTitre(A.nom);
     const point = (titre, ...contenu) => h("div", { class: "gd-point" }, h("h3", {}, titre), contenu);
     vue.append(filAddons(h("span", {}, A.nom)),
-      h("div", { class: "gd-hero gd-hero-petit" }, h("h1", {}, `L'addon ${A.nom}`), h("div", { class: "gd-separateur", "aria-hidden": "true" }),
-        h("p", { class: "gd-hero-resume" }, "Il partage tes métiers avec la guilde : c'est lui qui remplit la rubrique Métiers du site.")),
+      h("div", { class: "gd-hero gd-hero-petit" }, h("h1", {}, `L'addon ${A.nom}`), h("div", { class: "gd-separateur", "aria-hidden": "true" })),
       h("div", { class: "stack" },
         // D'abord ce qu'il fait, et seulement ça (le fond de addon/LISEZMOI.txt)
         cadre("En toute transparence",
