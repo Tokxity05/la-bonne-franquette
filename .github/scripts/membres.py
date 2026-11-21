@@ -2,7 +2,7 @@
 Lancé par GitHub Actions (.github/workflows/membres.yml) toutes les heures : écrit data/membres.json seulement si la liste a changé, et
 data/equipement.json (l'équipement de chacun, sur sa fiche officielle) pour ceux dont le niveau d'objet ou le niveau a bougé, ou lus il y a plus
 d'un jour : 12 fiches au plus par passage, les nouveaux d'abord.
-Python standard, aucune dépendance. Les noms des rangs viennent d'ailleurs (data/rangs.json, lus en jeu par l'addon d'un officier)."""
+Python standard, aucune dépendance. Les noms des rangs viennent d'ailleurs (data/rangs.json, lus en jeu par l'addon de Tokxity)."""
 import json
 import os
 import re
@@ -85,7 +85,10 @@ def equipement(adresse):
         return None
     etat = json.JSONDecoder().raw_decode(page, i + len("var characterProfileInitialState = "))[0]
     c = (etat or {}).get("character") or {}
-    return [piece(it) for it in (c.get("gear") or {}).values() if isinstance(it, dict) and it.get("id")]
+    # la spé : l'arbre qui a le plus de points (l'armurerie marque « active » tous ceux qui en ont) ; « » sans talent
+    specs = [s for s in c.get("specs") or [] if isinstance(s, dict) and s.get("id") and (s.get("spentPoints") or 0) > 0]
+    spe = max(specs, key=lambda s: s.get("spentPoints") or 0)["id"] if specs else ""
+    return [piece(it) for it in (c.get("gear") or {}).values() if isinstance(it, dict) and it.get("id")], spe
 
 
 def maj_equipement(membres):
@@ -100,7 +103,7 @@ def maj_equipement(membres):
         e = persos.get(m["adresse"])
         if not e:
             return (0, 0)
-        if e.get("ilvl") != m.get("ilvl") or e.get("niveau") != m.get("niveau"):
+        if e.get("ilvl") != m.get("ilvl") or e.get("niveau") != m.get("niveau") or "spe" not in e:
             return (1, e.get("lu") or 0)
         if maintenant - (e.get("lu") or 0) > JOUR:
             return (2, e.get("lu") or 0)
@@ -109,13 +112,14 @@ def maj_equipement(membres):
     lus = 0
     for m in file:
         try:
-            pieces = equipement(m["adresse"])
+            res = equipement(m["adresse"])
         except Exception as err:  # une fiche absente ou refusée : on garde l'ancienne, on réessaiera
             print(f"  {m['nom']} : {type(err).__name__}")
             continue
-        if pieces is None:
+        if res is None:
             continue
-        persos[m["adresse"]] = {"lu": int(maintenant), "ilvl": m.get("ilvl"), "niveau": m.get("niveau"), "pieces": pieces}
+        pieces, spe = res
+        persos[m["adresse"]] = {"lu": int(maintenant), "ilvl": m.get("ilvl"), "niveau": m.get("niveau"), "spe": spe, "pieces": pieces}
         lus += 1
     if persos == (ancien.get("persos") or {}):
         print(f"Équipement : rien de changé ({lus} fiche(s) relue(s)).")
