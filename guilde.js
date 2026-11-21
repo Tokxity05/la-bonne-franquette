@@ -791,48 +791,6 @@
         h("div", { class: "gd-rch-qui" }, qui.map(({ m, x, st, sait }) => h("a", { class: `gd-recharge${st.pret ? " pret" : sait ? "" : " inconnue"}`, href: lienMembre(m, x.cle, id), title: st.titre },
           h("span", { class: classeCss(m) }, m.nom), ` · ${st.pret ? "prête" : sait ? st.texte.replace(/^Prête dans /, "dans ") : "pas relevée"}`)))))));
   }
-  // 1013 (21/11) : le tier fabriqué du premier raid (guilde.json > tier, guilde.py > tier_fabrique) : par métier, chaque ensemble et ses
-  // quatre pièces ; qui connaît les recettes (n sur 4), sinon qui a le métier à 300
-  function blocTier() {
-    const T = D.tier || [];
-    if (!T.length) return null;
-    const parMetier = new Map();
-    for (const t of T) {
-      if (!parMetier.has(t.m)) parMetier.set(t.m, []);
-      parMetier.get(t.m).push(t);
-    }
-    const ligne = (t) => {
-      const sait = new Map();
-      for (const id of t.recettes) for (const { m } of IX.quiSait.get(String(id)) || []) sait.set(m, (sait.get(m) || 0) + 1);
-      let qui = [...sait.entries()].sort((a, b) => b[1] - a[1] || a[0].nom.localeCompare(b[0].nom, "fr"))
-        .map(([m, n]) => h("a", { class: "gd-recharge pret", href: lienMembre(m) }, h("span", { class: classeCss(m) }, m.nom), ` · ${n}/${t.recettes.length}`));
-      if (!qui.length) {
-        qui = D.membres.filter((m) => (m.metiers || []).some((x) => x.cle === t.m && (x.rang || 0) >= 300))
-          .map((m) => h("a", { class: "gd-recharge", href: lienMembre(m) }, h("span", { class: classeCss(m) }, m.nom), " · métier à 300"));
-      }
-      return h("div", { class: "gd-rch-ligne gd-tier-ligne" },
-        h("div", { class: "gd-tier-pieces" }, t.recettes.map((id) => {
-          const r = D.recettes[String(id)];
-          return r ? lienRecette(String(id), icone(r.i, "md", r.q), "gd-tier-piece") : null;
-        })),
-        h("div", { class: "gd-tier-nom" }, h("span", { class: "q-epic" }, t.nom),
-          h("span", { class: "gd-res-sous" }, t.spe === CLASSES[t.classe] ? t.spe : `${CLASSES[t.classe] || t.classe} · ${t.spe}`)),
-        h("div", { class: "gd-rch-qui" }, qui.length ? qui : h("span", { class: "gd-res-sous" }, "personne pour l'instant")));
-    };
-    // un métier à la fois, en onglets comme ceux de la fenêtre de métier ; le métier choisi reste pour la visite
-    const cles = [...parMetier.keys()];
-    if (!cles.includes(TIER_METIER)) TIER_METIER = cles[0];
-    const onglets = h("nav", { class: "lv-onglets gd-tier-onglets", "aria-label": "Métiers" });
-    const corps = h("div", { class: "gd-rch" });
-    const montrer = () => {
-      fill(onglets, cles.map((m) => h("button", { type: "button", class: `lv-onglet${m === TIER_METIER ? " actif" : ""}`, onclick: () => { TIER_METIER = m; montrer(); infobulles(); } },
-        icone(iconeMetier(m), "sm"), h("span", { class: "lv-onglet-nom" }, nomMetier(m)))));
-      fill(corps, parMetier.get(TIER_METIER).map(ligne));
-    };
-    montrer();
-    return cadre("Tier du premier raid", h("div", { class: "gd-tier" }, onglets, corps));
-  }
-  let TIER_METIER = null;
   function pageMetiers(q, voir) {
     const titre = rubrique("metiers").titre;
     setTitre(titre);
@@ -851,7 +809,6 @@
       h("div", { class: "stack" },
         blocRecherche(q),
         blocRecharges(),
-        blocTier(),
         metiers.length ? cadre("Les métiers de la guilde", h("div", { class: "gd-tuiles" }, metiers.map((cle) => {
           const L = IX.parMetier.get(cle) || [];
           const nR = idsDuMetier(cle).length;
