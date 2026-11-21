@@ -350,15 +350,6 @@
     for (const [k, v] of Object.entries(st)) if (!vus.has(k) && typeof v === "number" && v) equip.push(`Équipé : ${k.replace(/_/g, " ")} +${v}`);
     return [...base.map((t) => [t, "blanc"]), ...equip.map((t) => [t, null])];
   }
-  function paliers(r) {
-    const vert = r.j && r.g ? Math.round((r.j + r.g) / 2) : null;
-    const requise = r.s ? h("span", { class: "lv-requise", title: r.est ? "Estimée : le jeu ne la donne pas." : null }, "Compétence requise : ", h("b", { class: "o" }, `${r.est ? "≈" : ""}${r.s}`)) : null;
-    // Un palier qui se confond avec le suivant (jaune = gris) ne s'écrit qu'une fois
-    const j = r.j && (!r.g || r.j < r.g) ? r.j : null, v = vert && j && vert > j && vert < r.g ? vert : null;
-    const pal = r.j || r.g ? h("span", { class: "rc-paliers", title: `Paliers de compétence : jaune à ${r.j || "?"}${vert ? `, vert à ${vert}` : ""}, gris à ${r.g || "?"} (passé ce dernier, plus aucun point à gagner).` },
-      j ? h("b", { class: "j" }, j) : null, v ? h("b", { class: "v" }, v) : null, r.g ? h("b", { class: "g" }, r.g) : null) : null;
-    return [requise, pal];
-  }
   function detailRecette(id, { titre = "div", membre = null, lienQui = false } = {}) {
     const r = D.recettes[id];
     const [t, n] = whDe(r, id);
@@ -384,7 +375,7 @@
         return h("div", { class: "lv-comp" }, h("span", { class: "lv-comp-ic" }, lienWh("item", cid, icone(c.i, "md")), q > 1 ? h("b", {}, q) : null),
           h("span", { class: "lv-comp-nom" }, lienWh("item", cid, c.n || `Objet ${cid}`)));
       }))] : null,
-      h("div", { class: "lv-bas" }, paliers(r), r.cd ? h("span", { class: "lv-cd" }, `Recharge : ${dureeRecharge(r.cd)}`) : null,
+      h("div", { class: "lv-bas" }, r.cd ? h("span", { class: "lv-cd" }, `Recharge : ${dureeRecharge(r.cd)}`) : null,
         st ? h("span", { class: `gd-recharge${st.pret ? " pret" : ""}`, title: st.titre }, st.texte) : null),
       quiLigne);
   }
@@ -578,7 +569,7 @@
     const r = D.recettes[id], qui = IX.quiSait.get(id) || [], cat = IX.categorie.get(id);
     return lienRecette(id, [icone(r.i, "sm", r.k === "spell" ? null : r.q),
       h("span", { class: "gd-res-txt" }, h("span", { class: "gd-res-ligne" }, h("span", { class: `gd-res-nom q-${couleurNom(r)}` }, r.n), pastille(id)),
-        h("span", { class: "gd-res-sous" }, [nomMetier(r.m), cat ? cat.nom : null, r.s ? `compétence ${r.est ? "≈" : ""}${r.s}` : null].filter(Boolean).join(" · "))),
+        h("span", { class: "gd-res-sous" }, [nomMetier(r.m), cat ? cat.nom : null].filter(Boolean).join(" · "))),
       h("span", { class: "gd-res-qui" }, qui.length ? nomsQui(qui) : "personne")], "gd-res");
   }
   function resComposant({ id }) {
@@ -800,6 +791,48 @@
         h("div", { class: "gd-rch-qui" }, qui.map(({ m, x, st, sait }) => h("a", { class: `gd-recharge${st.pret ? " pret" : sait ? "" : " inconnue"}`, href: lienMembre(m, x.cle, id), title: st.titre },
           h("span", { class: classeCss(m) }, m.nom), ` · ${st.pret ? "prête" : sait ? st.texte.replace(/^Prête dans /, "dans ") : "pas relevée"}`)))))));
   }
+  // 1013 (21/11) : le tier fabriqué du premier raid (guilde.json > tier, guilde.py > tier_fabrique) : par métier, chaque ensemble et ses
+  // quatre pièces ; qui connaît les recettes (n sur 4), sinon qui a le métier à 300
+  function blocTier() {
+    const T = D.tier || [];
+    if (!T.length) return null;
+    const parMetier = new Map();
+    for (const t of T) {
+      if (!parMetier.has(t.m)) parMetier.set(t.m, []);
+      parMetier.get(t.m).push(t);
+    }
+    const ligne = (t) => {
+      const sait = new Map();
+      for (const id of t.recettes) for (const { m } of IX.quiSait.get(String(id)) || []) sait.set(m, (sait.get(m) || 0) + 1);
+      let qui = [...sait.entries()].sort((a, b) => b[1] - a[1] || a[0].nom.localeCompare(b[0].nom, "fr"))
+        .map(([m, n]) => h("a", { class: "gd-recharge pret", href: lienMembre(m) }, h("span", { class: classeCss(m) }, m.nom), ` · ${n}/${t.recettes.length}`));
+      if (!qui.length) {
+        qui = D.membres.filter((m) => (m.metiers || []).some((x) => x.cle === t.m && (x.rang || 0) >= 300))
+          .map((m) => h("a", { class: "gd-recharge", href: lienMembre(m) }, h("span", { class: classeCss(m) }, m.nom), " · métier à 300"));
+      }
+      return h("div", { class: "gd-rch-ligne gd-tier-ligne" },
+        h("div", { class: "gd-tier-pieces" }, t.recettes.map((id) => {
+          const r = D.recettes[String(id)];
+          return r ? lienRecette(String(id), icone(r.i, "md", r.q), "gd-tier-piece") : null;
+        })),
+        h("div", { class: "gd-tier-nom" }, h("span", { class: "q-epic" }, t.nom),
+          h("span", { class: "gd-res-sous" }, t.spe === CLASSES[t.classe] ? t.spe : `${CLASSES[t.classe] || t.classe} · ${t.spe}`)),
+        h("div", { class: "gd-rch-qui" }, qui.length ? qui : h("span", { class: "gd-res-sous" }, "personne pour l'instant")));
+    };
+    // un métier à la fois, en onglets comme ceux de la fenêtre de métier ; le métier choisi reste pour la visite
+    const cles = [...parMetier.keys()];
+    if (!cles.includes(TIER_METIER)) TIER_METIER = cles[0];
+    const onglets = h("nav", { class: "lv-onglets gd-tier-onglets", "aria-label": "Métiers" });
+    const corps = h("div", { class: "gd-rch" });
+    const montrer = () => {
+      fill(onglets, cles.map((m) => h("button", { type: "button", class: `lv-onglet${m === TIER_METIER ? " actif" : ""}`, onclick: () => { TIER_METIER = m; montrer(); infobulles(); } },
+        icone(iconeMetier(m), "sm"), h("span", { class: "lv-onglet-nom" }, nomMetier(m)))));
+      fill(corps, parMetier.get(TIER_METIER).map(ligne));
+    };
+    montrer();
+    return cadre("Tier du premier raid", h("div", { class: "gd-tier" }, onglets, corps));
+  }
+  let TIER_METIER = null;
   function pageMetiers(q, voir) {
     const titre = rubrique("metiers").titre;
     setTitre(titre);
@@ -818,6 +851,7 @@
       h("div", { class: "stack" },
         blocRecherche(q),
         blocRecharges(),
+        blocTier(),
         metiers.length ? cadre("Les métiers de la guilde", h("div", { class: "gd-tuiles" }, metiers.map((cle) => {
           const L = IX.parMetier.get(cle) || [];
           const nR = idsDuMetier(cle).length;
@@ -1235,7 +1269,7 @@
           const r = D.recettes[id], qui = IX.quiSait.get(id) || [];
           return lienRecette(id, [icone(r.i, "sm", r.k === "spell" ? null : r.q),
             h("span", { class: "gd-res-txt" }, h("span", { class: "gd-res-ligne" }, h("span", { class: `gd-rec-nom q-${couleurNom(r)}` }, r.n), pastille(id)),
-              r.s ? h("span", { class: "gd-res-sous" }, `compétence ${r.est ? "≈" : ""}${r.s}${r.cd ? ` · recharge ${dureeRecharge(r.cd)}` : ""}`) : null),
+              r.cd ? h("span", { class: "gd-res-sous" }, `recharge ${dureeRecharge(r.cd)}`) : null),
             h("span", { class: "gd-res-qui", title: qui.length > 4 ? qui.map((e) => e.m.nom).join(", ") : null }, nomsQui(qui, 4))], "gd-rec");
         })));
       }
