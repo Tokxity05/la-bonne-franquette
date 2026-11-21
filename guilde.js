@@ -648,7 +648,7 @@
       h("div", { class: "gd-docs" }, h("a", { class: "btn", href: lienAddon(ADDON_METIERS) }, (infoAddon() || {}).curseforge ? "Installer l'addon" : "Télécharger l'addon"),
         CFG.service ? h("a", { class: "btn ghost", href: "#/metiers/envoyer" }, "Envoyer mes métiers") : null))));
   }
-  // 989 · Par emplacement : les pièces que la guilde sait fabriquer et ce qu'elle sait poser dessus (enchantements, renforts, lunettes)
+  // 989 · Par emplacement : les pièces que la guilde sait fabriquer, puis ce qu'elle sait poser dessus (enchantements, renforts, lunettes…)
   const EMPLACEMENTS_GUILDE = [["tete", "Tête", "inv_helmet_47"], ["cou", "Cou", "inv_jewelry_amulet_07"], ["epaules", "Épaules", "inv_shoulder_23"],
     ["dos", "Dos", "inv_misc_cape_02"], ["torse", "Torse", "inv_chest_chain_09"], ["poignets", "Poignets", "inv_bracer_07"], ["mains", "Mains", "inv_gauntlets_05"],
     ["taille", "Taille", "inv_belt_06"], ["jambes", "Jambes", "inv_pants_06"], ["pieds", "Pieds", "inv_boots_05"], ["bijou", "Bijou", "inv_misc_enggizmos_02"],
@@ -664,8 +664,22 @@
     [/^(sacs|carquois|gibernes)/, ["sacs"]], [/^(casques|chaperons|couvre-chefs)/, ["tete"]], [/^(espauliers|spallieres)/, ["epaules"]], [/^capes/, ["dos"]],
     [/^(corselets|robes)/, ["torse"]], [/^brassards/, ["poignets"]], [/^(gantelets|gants)/, ["mains"]], [/^ceintures/, ["taille"]], [/^(garde-jambes|jambieres)/, ["jambes"]],
     [/^(bottes|chaussures)/, ["pieds"]]];
-  // Ce qui se pose sur une pièce (enchantement, renfort, lunette), à part des pièces elles-mêmes
-  const POSE = /^(enchantements|renforts d.armure|lunettes de visee)/;
+  // Ce qui se pose sur une pièce, à part des pièces elles-mêmes, un bloc par genre sous les pièces :
+  // [clé, titre du bloc, singulier, pluriel, test sur la catégorie de la fenêtre de métier ou sur le nom (sans accents)]
+  const POSES = [
+    ["enchant", "Enchantements", "enchantement", "enchantements", (c) => /^enchantements/.test(c)],
+    ["renfort", "Renforts d'armure", "renfort d'armure", "renforts d'armure", (c) => /^renforts d.armure/.test(c)],
+    ["lunette", "Lunettes de visée", "lunette de visée", "lunettes de visée", (c) => /^lunettes de visee/.test(c)],
+    ["pointe", "Pointes de bouclier", "pointe de bouclier", "pointes de bouclier", (c, n) => /^pointe de bouclier/.test(n)],
+    ["eperon", "Éperons", "paire d'éperons", "paires d'éperons", (c, n) => /^eperons/.test(n)],
+    ["attache", "Contrepoids et dragonnes", "accessoire d'arme", "accessoires d'arme", (c, n) => /^(contrepoids|dragonne)/.test(n)]];
+  // Les accessoires de forge rangés dans « Divers » : leur emplacement d'après leur nom
+  const NOM_EMPLACEMENT = [[/^pointe de bouclier/, ["main-gauche"]], [/^eperons/, ["pieds"]], [/^(contrepoids|dragonne)/, ["armes"]]];
+  function genrePose(id) {
+    const c = plat((IX.categorie.get(id) || {}).nom), n = plat((D.recettes[id] || {}).n);
+    const g = POSES.find((p) => p[4](c, n));
+    return g ? g[0] : null;
+  }
   // Le type d'une pièce (r.ty, d'après le client) : la rangée de choix d'un emplacement, et la ligne de chaque pièce ; [clé, pluriel, singulier]
   const TYPES_PIECE = [["tissu", "Tissu"], ["cuir", "Cuir"], ["mailles", "Mailles"], ["plaques", "Plaques"],
     ["epee", "Épées", "Épée"], ["hache", "Haches", "Hache"], ["masse", "Masses", "Masse"], ["dague", "Dagues", "Dague"], ["pugilat", "Armes de pugilat", "Arme de pugilat"],
@@ -690,8 +704,8 @@
     const r = D.recettes[id];
     if (!r) return [];
     if (r.k !== "spell" && SLOT_EMPLACEMENT[r.slot]) return [SLOT_EMPLACEMENT[r.slot]];
-    const c = plat((IX.categorie.get(id) || {}).nom);
-    const x = CATEGORIE_EMPLACEMENT.find(([re]) => re.test(c));
+    const c = plat((IX.categorie.get(id) || {}).nom), n = plat(r.n);
+    const x = CATEGORIE_EMPLACEMENT.find(([re]) => re.test(c)) || NOM_EMPLACEMENT.find(([re]) => re.test(n));
     return x ? x[1] : [];
   }
   function indexEmplacements() {
@@ -742,8 +756,9 @@
     const ids = ix.get(def[0]);
     const parNiveau = (a, b) => (D.recettes[b].req || 0) - (D.recettes[a].req || 0) || (D.recettes[b].ilvl || 0) - (D.recettes[a].ilvl || 0) || (D.recettes[b].s || 0) - (D.recettes[a].s || 0)
       || D.recettes[a].n.localeCompare(D.recettes[b].n, "fr");
-    const pose = ids.filter((id) => POSE.test(plat((IX.categorie.get(id) || {}).nom))).sort(parNiveau);
-    const tous = ids.filter((id) => !pose.includes(id)).sort(parNiveau);
+    const genres = POSES.map(([k, titre, s, p]) => ({ titre, s, p, L: ids.filter((id) => genrePose(id) === k).sort(parNiveau) })).filter((g) => g.L.length);
+    const pose = new Set(genres.flatMap((g) => g.L));
+    const tous = ids.filter((id) => !pose.has(id)).sort(parNiveau);
     // Le type (tissu, cuir… ; épée, baguette… ; libram…) : un choix seulement quand l'emplacement en a au moins deux
     const deType = (k) => tous.filter((id) => typePiece(id) === k);
     const types = TYPES_PIECE.map(([k]) => k).filter((k) => deType(k).length);
@@ -755,14 +770,14 @@
     const rangeeTypes = types.length > 1 ? h("nav", { class: "gd-empl gd-types", "aria-label": "Par type" }, lienType(null, "Tout", def[2], tous.length),
       types.map((k) => { const L = deType(k); return lienType(k, TYPE_PIECE.get(k).p, D.recettes[L[0]].i, L.length); })) : null;
     const blocPieces = pieces.length ? cadre(`${choix ? TYPE_PIECE.get(choix).p : "Les pièces"} (${pieces.length})`, h("div", { class: "gd-res-liste" }, pieces.map(resEmplacement))) : null;
-    const blocPose = pose.length ? cadre(`À poser dessus (${pose.length})`, h("div", { class: "gd-res-liste" }, pose.map(resEmplacement))) : null;
+    const blocsPose = genres.map((g) => cadre(`${g.titre} (${g.L.length})`, h("div", { class: "gd-res-liste" }, g.L.map(resEmplacement))));
     vue.append(filMetiers(h("a", { href: "#/metiers/emplacement" }, titre), choix ? h("a", { href: `#/metiers/emplacement/${def[0]}` }, def[1]) : h("span", {}, def[1]),
       choix ? h("span", {}, TYPE_PIECE.get(choix).p) : null),
       h("section", { class: "frame gd-entete" }, h("div", { class: "gd-tete-metier" }, icone(def[2], "xl"),
         h("div", {}, h("h1", {}, choix ? `${def[1]} · ${TYPE_PIECE.get(choix).p}` : def[1]),
-          h("p", {}, [pieces.length ? pl(pieces.length, "pièce") : null, pose.length ? pl(pose.length, "amélioration") : null].filter(Boolean).join(" · ")))),
+          h("p", {}, [pieces.length ? pl(pieces.length, "pièce") : null, ...genres.map((g) => pl(g.L.length, g.s, g.p))].filter(Boolean).join(" · ")))),
         rangeeEmplacements(def[0], choix || (TYPE_PIECE.has(type) ? type : null)), rangeeTypes),
-      h("div", { class: "stack" }, ...(choix ? [blocPieces, blocPose] : [blocPose, blocPieces])));
+      h("div", { class: "stack" }, blocPieces, ...blocsPose));
   }
 
   // Les recettes à recharge de la guilde (étoffe lunaire, transmutations…) : qui peut les lancer aujourd'hui, les prêtes d'abord
