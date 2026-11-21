@@ -626,6 +626,11 @@ a.gd-membre:hover, a.gd-qui:hover { background: var(--survol); text-decoration: 
 .gd-eq-nom { font-size: .92rem; font-weight: 600; overflow-wrap: anywhere; }
 .gd-eq-sous { font-size: .76rem; color: var(--texte-3); }
 .gd-eq-ench { font-size: .78rem; color: var(--q-uncommon); }
+/* 1012 : la pièce face à la liste BiS de la spé */
+.gd-eq-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.gd-eq-tag { padding: 0 7px; border: 1px solid var(--ligne-forte); border-radius: 999px; font-size: .68rem; font-weight: 600; line-height: 1.6; color: var(--texte-3); cursor: default; }
+.gd-eq-tag.bis { color: var(--or); border-color: rgba(233, 199, 126, .5); background: rgba(233, 199, 126, .08); }
+.gd-eq-tag.sans { color: #e8857a; border-color: rgba(232, 133, 122, .45); }
 @media (max-width: 700px) { .gd-eq-grille, .gd-eq-armes { grid-template-columns: minmax(0, 1fr); } }
 
 /* Les nouveautés en lignes simples (20/11) : une par ligne, la date à droite */
