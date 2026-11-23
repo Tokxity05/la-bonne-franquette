@@ -63,7 +63,7 @@
     ["degats_arcanes", (v) => `Équipé : dégâts des sorts des Arcanes +${v}`], ["degats_sacre", (v) => `Équipé : dégâts des sorts du Sacré +${v}`],
     ["puissance_attaque", (v) => `Équipé : puissance d'attaque +${v}`], ["mp5", (v) => `Équipé : ${v} points de mana toutes les 5 s`],
     ["critique_pct", (v) => `Équipé : coup critique +${v} %`], ["critique_sorts_pct", (v) => `Équipé : critique des sorts +${v} %`],
-    ["toucher_pct", (v) => `Équipé : toucher +${v} %`], ["toucher_sorts_pct", (v) => `Équipé : toucher des sorts +${v} %`],
+    ["toucher_pct", (v) => `Équipé : toucher +${v} %`], ["toucher_sorts_pct", (v) => `Équipé : toucher des sorts +${v} %`], ["toucher_distance_pct", (v) => `Équipé : toucher à distance +${v} %`],
   ];
 
   // site.json, mis en forme par lireSite (sans fichier : le nom de la guilde, et les rubriques connues ici)
