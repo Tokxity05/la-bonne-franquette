@@ -1,7 +1,8 @@
 """Les membres de La Bonne Franquette d'après l'armurerie officielle de Blizzard (publique), pour la rubrique Membres du site.
 Lancé par GitHub Actions (.github/workflows/membres.yml) toutes les heures : écrit data/membres.json seulement si la liste a changé, et
 data/equipement.json (l'équipement de chacun, sur sa fiche officielle) pour ceux dont le niveau d'objet ou le niveau a bougé, ou lus il y a plus
-d'un jour : 12 fiches au plus par passage, les nouveaux d'abord.
+d'un jour : 12 fiches au plus par passage, les nouveaux d'abord. Le niveau d'objet que l'armurerie ne donne plus (25/11) se calcule d'après
+data/niveaux-objets.json.
 Python standard, aucune dépendance. Les noms des rangs viennent d'ailleurs (data/rangs.json, lus en jeu par l'addon de Tokxity)."""
 import json
 import os
@@ -20,6 +21,38 @@ SORTIE = Path(__file__).resolve().parents[2] / "data" / "membres.json"
 EQUIPEMENT = SORTIE.parent / "equipement.json"
 MAX_FICHES = int(os.environ.get("LBF_MAX_FICHES") or 12)  # fiches lues par passage, pour ménager l'armurerie
 JOUR = 24 * 3600
+# Depuis le 25/11, l'armurerie ne donne plus le niveau d'objet (ni la moyenne du roster, ni celui des pièces) : on le calcule d'après la table
+# des niveaux tirée du client du jeu (data/niveaux-objets.json, publiée par guilde.py)
+NIVEAUX = SORTIE.parent / "niveaux-objets.json"
+# La moyenne de l'armurerie, recalée sur 173 relevés d'avant le 25/11 (70 sur 75 au niveau 58 et plus, à 1 près sinon) : 16 emplacements (sans
+# chemise, tabard, arme à distance ni relique), une arme à deux mains compte deux fois, un emplacement vide compte 0, arrondi à l'unité inférieure
+HORS_MOYENNE = {"SHIRT", "TABARD", "RANGED"}
+
+
+def table_niveaux():
+    try:
+        return {int(k): v for k, v in (json.loads(NIVEAUX.read_text(encoding="utf-8")).get("niveaux") or {}).items()}
+    except (OSError, ValueError):
+        return {}
+
+
+def poser_niveaux(pieces, niveaux):
+    """Le niveau de chaque pièce qui n'en a pas, d'après la table."""
+    for p in pieces or []:
+        if p.get("l") is None and niveaux.get(p.get("id")):
+            p["l"] = niveaux[p["id"]]
+
+
+def moyenne(pieces):
+    """Le niveau d'objet moyen comme l'armurerie le donnait ; None si une pièce comptée n'a pas de niveau connu."""
+    comptees = [p for p in pieces or [] if p.get("s") not in HORS_MOYENNE]
+    if not comptees or any(p.get("l") is None for p in comptees):
+        return None
+    total = sum(p["l"] for p in comptees)
+    mg = next((p for p in comptees if p.get("s") == "MAIN_HAND"), None)
+    if mg and "deux mains" in (mg.get("t") or "").lower() and not any(p.get("s") == "OFF_HAND" for p in comptees):
+        total += mg["l"]
+    return total // 16
 
 
 def obtenir(url, corps=None, entetes=None):
@@ -92,12 +125,30 @@ def equipement(adresse):
 
 
 def maj_equipement(membres):
-    """Relit l'équipement de ceux qui en ont besoin (nouveaux, niveau d'objet ou niveau changé, plus d'un jour), 12 au plus ; écrit si ça change."""
+    """Relit l'équipement de ceux qui en ont besoin (nouveaux, niveau d'objet ou niveau changé, plus d'un jour), 12 au plus ; écrit si ça change.
+    Un membre dont l'armurerie ne donne pas le niveau d'objet prend celui de son équipement (calculé), avant et après la relecture."""
     ancien = json.loads(EQUIPEMENT.read_text(encoding="utf-8")) if EQUIPEMENT.exists() else {}
-    persos = dict(ancien.get("persos") or {})
+    persos = json.loads(json.dumps(ancien.get("persos") or {}))  # une copie : l'ancien sert à savoir si quelque chose a changé
     presents = {m["adresse"] for m in membres if m.get("adresse") and m.get("armurerie")}
     persos = {k: v for k, v in persos.items() if k in presents}  # un membre parti s'en va
     maintenant = time.time()
+    niveaux = table_niveaux()
+    roster = {m["adresse"] for m in membres if m.get("ilvl") is not None}  # ceux dont l'armurerie donne encore le niveau d'objet
+
+    def calculer(m):
+        e = persos.get(m.get("adresse"))
+        if not e:
+            return
+        poser_niveaux(e.get("pieces"), niveaux)
+        if m["adresse"] not in roster:
+            v = moyenne(e.get("pieces"))
+            if v is None:
+                m.pop("ilvl", None)
+            else:
+                m["ilvl"] = v
+            e["ilvl"] = v
+    for m in membres:
+        calculer(m)
 
     def priorite(m):
         e = persos.get(m["adresse"])
@@ -120,6 +171,7 @@ def maj_equipement(membres):
             continue
         pieces, spe = res
         persos[m["adresse"]] = {"lu": int(maintenant), "ilvl": m.get("ilvl"), "niveau": m.get("niveau"), "spe": spe, "pieces": pieces}
+        calculer(m)
         lus += 1
     if persos == (ancien.get("persos") or {}):
         print(f"Équipement : rien de changé ({lus} fiche(s) relue(s)).")
@@ -140,6 +192,10 @@ def main():
     if not membres:
         print("Liste vide : rien d'écrit.")
         return 0
+    try:  # d'abord l'équipement : le niveau d'objet que l'armurerie ne donne plus en vient
+        maj_equipement(membres)
+    except Exception as err:
+        print(f"::warning::Équipement non relu ({type(err).__name__} : {err}) : on réessaiera.")
     ancien = json.loads(SORTIE.read_text(encoding="utf-8")) if SORTIE.exists() else {}
     if ancien.get("membres") == membres:
         print(f"{len(membres)} membres, rien de changé.")
@@ -149,10 +205,6 @@ def main():
         SORTIE.parent.mkdir(parents=True, exist_ok=True)
         SORTIE.write_text(json.dumps(d, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         print(f"{len(membres)} membres écrits.")
-    try:
-        maj_equipement(membres)
-    except Exception as err:
-        print(f"::warning::Équipement non relu ({type(err).__name__} : {err}) : on réessaiera.")
     return 0
 
 
